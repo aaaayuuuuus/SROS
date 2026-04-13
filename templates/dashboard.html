@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — SROS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0f0d;
+    --surface: #111810;
+    --surface2: #182016;
+    --green: #4ade80;
+    --green-dim: #16a34a;
+    --green-glow: rgba(74,222,128,0.1);
+    --amber: #fbbf24;
+    --red: #f87171;
+    --blue: #60a5fa;
+    --text: #e8f0ea;
+    --muted: #6b7c6e;
+    --border: rgba(74,222,128,0.12);
+    --serif: 'DM Serif Display', serif;
+    --sans: 'DM Sans', sans-serif;
+    --mono: 'Space Mono', monospace;
+    --radius: 16px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    grid-template-rows: auto 1fr;
+  }
+
+  /* ── SIDEBAR ── */
+  aside {
+    grid-row: 1 / 3;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 32px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .sidebar-logo {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    color: var(--green);
+    text-transform: uppercase;
+    margin-bottom: 32px;
+    padding: 0 8px;
+  }
+
+  .sidebar-section {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    color: var(--muted);
+    text-transform: uppercase;
+    padding: 8px 8px 4px;
+    margin-top: 8px;
+  }
+
+  .sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 14px;
+    transition: all 0.15s;
+    cursor: pointer;
+  }
+  .sidebar-link:hover { background: var(--surface2); color: var(--text); }
+  .sidebar-link.active { background: var(--green-glow); color: var(--green); }
+  .sidebar-link .icon { font-size: 16px; width: 20px; text-align: center; }
+
+  .sidebar-bottom {
+    margin-top: auto;
+    padding: 16px 12px;
+    background: var(--green-glow);
+    border: 1px solid rgba(74,222,128,0.2);
+    border-radius: 12px;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+  .sidebar-bottom strong { color: var(--green); font-family: var(--mono); }
+
+  /* ── TOPBAR ── */
+  header {
+    grid-column: 2;
+    padding: 24px 36px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .page-title {
+    font-family: var(--serif);
+    font-size: 26px;
+  }
+
+  .header-right {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .badge-green { background: var(--green-glow); color: var(--green); border: 1px solid rgba(74,222,128,0.3); }
+  .badge-amber { background: rgba(251,191,36,0.1); color: var(--amber); border: 1px solid rgba(251,191,36,0.3); }
+
+  /* ── MAIN ── */
+  main {
+    grid-column: 2;
+    padding: 32px 36px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+  }
+
+  /* ── METRIC CARDS ── */
+  .metrics-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+
+  .metric-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    transition: border-color 0.2s;
+  }
+  .metric-card:hover { border-color: rgba(74,222,128,0.3); }
+
+  .metric-icon { font-size: 24px; margin-bottom: 16px; display: block; }
+
+  .metric-val {
+    font-family: var(--mono);
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  .metric-label {
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+  }
+
+  .metric-delta {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: var(--mono);
+    font-size: 10px;
+    margin-top: 10px;
+    padding: 3px 8px;
+    border-radius: 20px;
+  }
+  .delta-up { background: rgba(74,222,128,0.1); color: var(--green); }
+  .delta-neutral { background: rgba(107,124,110,0.15); color: var(--muted); }
+
+  /* ── TWO COLUMN ROW ── */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .three-col { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+
+  /* ── CARD ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+  }
+
+  .card-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  /* ── EMISSION CHART ── */
+  .chart-bars {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    height: 150px;
+    padding-bottom: 0;
+  }
+
+  .chart-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+
+  .chart-bar {
+    width: 100%;
+    border-radius: 6px 6px 0 0;
+    transition: opacity 0.2s;
+    cursor: pointer;
+    position: relative;
+  }
+  .chart-bar:hover { opacity: 0.8; }
+
+  .chart-bar-label { font-size: 16px; }
+  .chart-bar-val { font-family: var(--mono); font-size: 9px; color: var(--muted); }
+
+  /* ── LEADERBOARD ── */
+  .leaderboard-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .leaderboard-row:last-child { border-bottom: none; }
+
+  .rank-badge {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .rank-1 { background: rgba(251,191,36,0.15); color: var(--amber); }
+  .rank-2 { background: rgba(148,163,184,0.1); color: #94a3b8; }
+  .rank-3 { background: rgba(205,127,50,0.1);  color: #cd7f32; }
+  .rank-other { background: var(--surface2); color: var(--muted); }
+
+  .lb-name { flex: 1; font-size: 14px; }
+  .lb-trips { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .lb-savings {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--green);
+    font-weight: 700;
+  }
+
+  .lb-bar-wrap { width: 80px; }
+  .lb-bar { height: 4px; background: var(--surface2); border-radius: 2px; }
+  .lb-bar-fill { height: 100%; border-radius: 2px; background: var(--green); }
+
+  /* ── ROUTE HISTORY ── */
+  .history-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .history-row:last-child { border-bottom: none; }
+
+  .history-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .history-route { flex: 1; }
+  .history-cities { font-size: 14px; }
+  .history-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  .history-co2 { font-family: var(--mono); font-size: 12px; text-align: right; }
+  .history-score { font-family: var(--mono); font-size: 10px; color: var(--muted); margin-top: 2px; text-align: right; }
+
+  /* ── VEHICLE BREAKDOWN ── */
+  .vehicle-list { display: flex; flex-direction: column; gap: 14px; }
+  .vehicle-row { display: flex; flex-direction: column; gap: 5px; }
+  .vehicle-row-header { display: flex; justify-content: space-between; font-size: 13px; }
+  .vehicle-row-name { color: var(--text); }
+  .vehicle-row-val { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .vehicle-progress { height: 6px; background: var(--surface2); border-radius: 3px; }
+  .vehicle-progress-fill { height: 100%; border-radius: 3px; transition: width 1s ease; }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  @media (max-width: 900px) {
+    body { grid-template-columns: 1fr; }
+    aside { display: none; }
+    header { grid-column: 1; }
+    main { grid-column: 1; padding: 20px; }
+    .metrics-row { grid-template-columns: repeat(2, 1fr); }
+    .two-col, .three-col { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside>
+  <div class="sidebar-logo">SROS</div>
+
+  <div class="sidebar-section">Main</div>
+  <a class="sidebar-link active" href="/dashboard">
+    <span class="icon">📊</span> Dashboard
+  </a>
+  <a class="sidebar-link" href="/">
+    <span class="icon">🗺️</span> Route Planner
+  </a>
+  <a class="sidebar-link" href="/">
+    <span class="icon">⚡</span> Optimize
+  </a>
+
+  <div class="sidebar-section">Analytics</div>
+  <a class="sidebar-link" href="#">
+    <span class="icon">🌱</span> Emissions
+  </a>
+  <a class="sidebar-link" href="#">
+    <span class="icon">🏆</span> Leaderboard
+  </a>
+  <a class="sidebar-link" href="#">
+    <span class="icon">📅</span> History
+  </a>
+
+  <div class="sidebar-section">System</div>
+  <a class="sidebar-link" href="#">
+    <span class="icon">⚙️</span> Settings
+  </a>
+  <a class="sidebar-link" href="#">
+    <span class="icon">📖</span> Docs
+  </a>
+
+  <div class="sidebar-bottom">
+    <strong>17 cities</strong> supported<br>
+    <span>7 vehicle profiles<br>Real-time optimization</span>
+  </div>
+</aside>
+
+<!-- TOPBAR -->
+<header>
+  <div class="page-title">Overview</div>
+  <div class="header-right">
+    <div class="badge badge-green">● System Online</div>
+    <div class="badge badge-amber">Live Demo Mode</div>
+    <a href="/" style="font-family:var(--mono);font-size:11px;color:var(--muted);text-decoration:none;letter-spacing:0.08em;padding:8px 16px;border:1px solid var(--border);border-radius:8px;">← Back to Planner</a>
+  </div>
+</header>
+
+<!-- MAIN -->
+<main>
+
+  <!-- METRIC CARDS -->
+  <div class="metrics-row">
+    <div class="metric-card">
+      <span class="metric-icon">🗺️</span>
+      <div class="metric-val" style="color:var(--green);" id="m-routes">4,823</div>
+      <div class="metric-label">Routes Calculated</div>
+      <div class="metric-delta delta-up">↑ 12% this week</div>
+    </div>
+    <div class="metric-card">
+      <span class="metric-icon">🌿</span>
+      <div class="metric-val" id="m-co2">12,340</div>
+      <div class="metric-label">kg CO₂ Saved</div>
+      <div class="metric-delta delta-up">↑ 8% this week</div>
+    </div>
+    <div class="metric-card">
+      <span class="metric-icon">🌳</span>
+      <div class="metric-val" id="m-trees">587</div>
+      <div class="metric-label">Trees Equivalent</div>
+      <div class="metric-delta delta-up">↑ Cumulative</div>
+    </div>
+    <div class="metric-card">
+      <span class="metric-icon">💰</span>
+      <div class="metric-val" id="m-cost">₹2.1L</div>
+      <div class="metric-label">Fuel Cost Saved</div>
+      <div class="metric-delta delta-neutral">Across all users</div>
+    </div>
+  </div>
+
+  <!-- CHART + LEADERBOARD -->
+  <div class="two-col">
+
+    <div class="card">
+      <div class="card-title">
+        <span>CO₂ per vehicle (g/km)</span>
+        <span style="color:var(--green);">per 100km</span>
+      </div>
+      <div class="chart-bars" id="emission-chart">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span>Eco Leaderboard</span>
+        <span>Top Savers</span>
+      </div>
+      <div id="leaderboard-list">Loading…</div>
+    </div>
+
+  </div>
+
+  <!-- HISTORY + VEHICLE BREAKDOWN -->
+  <div class="three-col">
+
+    <div class="card">
+      <div class="card-title">
+        <span>Recent Routes</span>
+        <span style="color:var(--muted);">Last 5 trips</span>
+      </div>
+      <div id="history-list">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span>Vehicle Usage</span>
+      </div>
+      <div class="vehicle-list" id="vehicle-breakdown">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+
+  </div>
+
+</main>
+
+<script>
+  // ── Emission chart ──
+  const vehicles = [
+    { name: 'Petrol', icon: '🚗', co2: 171, color: '#ef4444' },
+    { name: 'Diesel', icon: '🚙', co2: 145, color: '#f97316' },
+    { name: 'CNG',    icon: '🚘', co2: 96,  color: '#eab308' },
+    { name: 'Bike',   icon: '🏍️', co2: 83,  color: '#a855f7' },
+    { name: 'Bus',    icon: '🚌', co2: 14,  color: '#3b82f6' },
+    { name: 'EV',     icon: '⚡', co2: 0,   color: '#22c55e' },
+    { name: 'Cycle',  icon: '🚲', co2: 0,   color: '#14b8a6' },
+  ];
+
+  const maxCo2 = 171;
+  const chart  = document.getElementById('emission-chart');
+  vehicles.forEach(v => {
+    const barH = v.co2 === 0 ? 6 : Math.max(6, (v.co2 / maxCo2) * 130);
+    const w = document.createElement('div');
+    w.className = 'chart-bar-wrap';
+    w.innerHTML = `
+      <div class="chart-bar-label">${v.icon}</div>
+      <div class="chart-bar" title="${v.co2}g CO₂/km" style="height:${barH}px;background:${v.color}25;border:1px solid ${v.color}60;border-bottom:2px solid ${v.color};"></div>
+      <div class="chart-bar-val">${v.co2}g</div>
+      <div class="chart-bar-val">${v.name}</div>
+    `;
+    chart.appendChild(w);
+  });
+
+  // ── Leaderboard ──
+  async function loadLeaderboard() {
+    try {
+      const res = await fetch('/api/leaderboard');
+      const data = await res.json();
+      const container = document.getElementById('leaderboard-list');
+      const maxSavings = Math.max(...data.map(d => d.savings_kg));
+      container.innerHTML = data.map(d => {
+        const rankClass = d.rank <= 3 ? `rank-${d.rank}` : 'rank-other';
+        const medals = { 1: '🥇', 2: '🥈', 3: '🥉' };
+        const icon = medals[d.rank] || d.rank;
+        const fillWidth = Math.round((d.savings_kg / maxSavings) * 100);
+        return `
+          <div class="leaderboard-row">
+            <div class="rank-badge ${rankClass}">${icon}</div>
+            <div class="lb-name">${d.user}</div>
+            <div class="lb-bar-wrap">
+              <div class="lb-bar"><div class="lb-bar-fill" style="width:${fillWidth}%"></div></div>
+            </div>
+            <div>
+              <div class="lb-savings">${d.savings_kg} kg</div>
+              <div class="lb-trips">${d.trips} trips</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    } catch (e) {
+      document.getElementById('leaderboard-list').textContent = 'Could not load data.';
+    }
+  }
+  loadLeaderboard();
+
+  // ── History ──
+  const historyData = [
+    { from: 'Delhi',     to: 'Agra',      type: 'greenest', color: '#22c55e', co2: 3.1,  score: 82 },
+    { from: 'Mumbai',    to: 'Pune',       type: 'balanced', color: '#f59e0b', co2: 2.4,  score: 68 },
+    { from: 'Bangalore', to: 'Hyderabad',  type: 'fastest',  color: '#ef4444', co2: 11.2, score: 35 },
+    { from: 'Noida',     to: 'Jaipur',     type: 'greenest', color: '#22c55e', co2: 5.7,  score: 79 },
+    { from: 'Chennai',   to: 'Bengaluru',  type: 'balanced', color: '#f59e0b', co2: 7.3,  score: 60 },
+  ];
+
+  const hist = document.getElementById('history-list');
+  hist.innerHTML = historyData.map(h => `
+    <div class="history-row">
+      <div class="history-dot" style="background:${h.color}"></div>
+      <div class="history-route">
+        <div class="history-cities">${h.from} → ${h.to}</div>
+        <div class="history-meta">${h.type} route</div>
+      </div>
+      <div>
+        <div class="history-co2" style="color:${h.color}">${h.co2} kg CO₂</div>
+        <div class="history-score">Score: ${h.score}/100</div>
+      </div>
+    </div>
+  `).join('');
+
+  // ── Vehicle breakdown ──
+  const vehicleUsage = [
+    { name: 'Petrol Car',   pct: 42, color: '#ef4444' },
+    { name: 'Electric',     pct: 24, color: '#22c55e' },
+    { name: 'CNG Car',      pct: 16, color: '#eab308' },
+    { name: 'Bike',         pct: 12, color: '#a855f7' },
+    { name: 'Public Bus',   pct: 6,  color: '#3b82f6' },
+  ];
+
+  const vb = document.getElementById('vehicle-breakdown');
+  vb.innerHTML = vehicleUsage.map(v => `
+    <div class="vehicle-row">
+      <div class="vehicle-row-header">
+        <span class="vehicle-row-name">${v.name}</span>
+        <span class="vehicle-row-val">${v.pct}%</span>
+      </div>
+      <div class="vehicle-progress">
+        <div class="vehicle-progress-fill" style="width:${v.pct}%;background:${v.color};"></div>
+      </div>
+    </div>
+  `).join('');
+</script>
+
+</body>
+</html>

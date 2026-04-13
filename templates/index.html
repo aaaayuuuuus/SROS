@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SROS — Sustainable Route Optimization System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0f0d;
+    --surface: #111810;
+    --surface2: #182016;
+    --green: #4ade80;
+    --green-dim: #16a34a;
+    --green-glow: rgba(74,222,128,0.15);
+    --amber: #fbbf24;
+    --red: #f87171;
+    --text: #e8f0ea;
+    --muted: #6b7c6e;
+    --border: rgba(74,222,128,0.12);
+    --serif: 'DM Serif Display', serif;
+    --sans: 'DM Sans', sans-serif;
+    --mono: 'Space Mono', monospace;
+    --radius: 16px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── NOISE TEXTURE ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.4;
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 48px;
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    background: rgba(10,15,13,0.7);
+  }
+
+  .logo {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    color: var(--green);
+    text-transform: uppercase;
+  }
+
+  .nav-links { display: flex; gap: 32px; }
+  .nav-links a {
+    font-size: 13px;
+    color: var(--muted);
+    text-decoration: none;
+    letter-spacing: 0.05em;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--text); }
+
+  .nav-cta {
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 10px 22px;
+    border: 1px solid var(--green);
+    color: var(--green);
+    background: transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    text-decoration: none;
+  }
+  .nav-cta:hover {
+    background: var(--green-glow);
+    box-shadow: 0 0 20px rgba(74,222,128,0.2);
+  }
+
+  /* ── HERO ── */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 120px 24px 80px;
+    position: relative;
+  }
+
+  /* Radial glow behind hero */
+  .hero::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%,-60%);
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(74,222,128,0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .hero-eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.25em;
+    color: var(--green);
+    text-transform: uppercase;
+    margin-bottom: 24px;
+    opacity: 0;
+    animation: fadeUp 0.8s ease 0.1s forwards;
+  }
+
+  .hero h1 {
+    font-family: var(--serif);
+    font-size: clamp(52px, 8vw, 108px);
+    line-height: 1.0;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    max-width: 900px;
+    opacity: 0;
+    animation: fadeUp 0.9s ease 0.25s forwards;
+  }
+
+  .hero h1 em {
+    font-style: italic;
+    color: var(--green);
+  }
+
+  .hero-sub {
+    margin-top: 28px;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--muted);
+    max-width: 480px;
+    font-weight: 300;
+    opacity: 0;
+    animation: fadeUp 0.9s ease 0.4s forwards;
+  }
+
+  .hero-actions {
+    margin-top: 48px;
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    opacity: 0;
+    animation: fadeUp 0.9s ease 0.55s forwards;
+  }
+
+  .btn-primary {
+    font-family: var(--mono);
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 16px 36px;
+    background: var(--green);
+    color: #0a0f0d;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 700;
+    transition: all 0.2s;
+    text-decoration: none;
+    display: inline-block;
+  }
+  .btn-primary:hover {
+    background: #86efac;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 30px rgba(74,222,128,0.35);
+  }
+
+  .btn-ghost {
+    font-family: var(--mono);
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 16px 36px;
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+  }
+  .btn-ghost:hover { color: var(--text); border-color: rgba(74,222,128,0.3); }
+
+  /* ── STATS BAR ── */
+  .stats-bar {
+    display: flex;
+    gap: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-top: 72px;
+    opacity: 0;
+    animation: fadeUp 0.9s ease 0.7s forwards;
+  }
+
+  .stat {
+    padding: 20px 36px;
+    border-right: 1px solid var(--border);
+    text-align: center;
+  }
+  .stat:last-child { border-right: none; }
+
+  .stat-num {
+    font-family: var(--mono);
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--green);
+    line-height: 1;
+  }
+
+  .stat-label {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-top: 6px;
+  }
+
+  /* ── ROUTE PLANNER SECTION ── */
+  .planner-section {
+    padding: 80px 48px 120px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .section-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: var(--green);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  .section-title {
+    font-family: var(--serif);
+    font-size: clamp(32px, 4vw, 52px);
+    line-height: 1.1;
+    margin-bottom: 48px;
+  }
+
+  /* Planner card */
+  .planner-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    min-height: 520px;
+  }
+
+  .planner-form-side {
+    padding: 48px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    border-right: 1px solid var(--border);
+  }
+
+  .planner-title {
+    font-family: var(--serif);
+    font-size: 28px;
+    margin-bottom: 8px;
+  }
+
+  .field-group { display: flex; flex-direction: column; gap: 8px; }
+
+  .field-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  .field-input {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 18px;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s;
+    width: 100%;
+  }
+  .field-input:focus { border-color: var(--green); box-shadow: 0 0 0 3px var(--green-glow); }
+  .field-input::placeholder { color: var(--muted); font-size: 14px; }
+
+  .field-input option { background: var(--surface); }
+
+  /* Vehicle grid */
+  .vehicle-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+
+  .vehicle-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 8px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+    color: var(--muted);
+    font-family: var(--sans);
+  }
+  .vehicle-btn:hover { border-color: rgba(74,222,128,0.4); color: var(--text); }
+  .vehicle-btn.active {
+    border-color: var(--green);
+    background: var(--green-glow);
+    color: var(--green);
+  }
+  .vehicle-icon { font-size: 20px; display: block; margin-bottom: 4px; }
+  .vehicle-name { font-size: 10px; letter-spacing: 0.05em; }
+
+  .calc-btn {
+    margin-top: auto;
+    font-family: var(--mono);
+    font-size: 13px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 18px;
+    background: var(--green);
+    color: #0a0f0d;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 700;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+  .calc-btn:hover {
+    background: #86efac;
+    box-shadow: 0 8px 30px rgba(74,222,128,0.3);
+  }
+  .calc-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .calc-btn .spinner { width: 16px; height: 16px; border: 2px solid rgba(0,0,0,0.3); border-top-color: #0a0f0d; border-radius: 50%; animation: spin 0.6s linear infinite; display: none; }
+  .calc-btn.loading .spinner { display: block; }
+  .calc-btn.loading .btn-text { display: none; }
+
+  /* Results side */
+  .planner-results-side {
+    padding: 48px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    position: relative;
+  }
+
+  .results-placeholder {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    color: var(--muted);
+    text-align: center;
+  }
+
+  .placeholder-icon {
+    width: 64px; height: 64px;
+    border: 2px dashed var(--border);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+  }
+
+  .route-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px 20px;
+    cursor: pointer;
+    transition: all 0.25s;
+    display: none;
+  }
+  .route-card:hover { border-color: rgba(74,222,128,0.35); transform: translateX(4px); }
+  .route-card.active { border-left: 3px solid var(--green); }
+  .route-card.show { display: block; }
+
+  .route-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  .route-type-badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 6px;
+  }
+
+  .route-meta {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 10px;
+  }
+
+  .route-metric { text-align: center; }
+  .route-metric-val {
+    font-family: var(--mono);
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .route-metric-key { font-size: 10px; color: var(--muted); margin-top: 4px; letter-spacing: 0.06em; }
+
+  .green-score-bar {
+    height: 4px;
+    background: var(--surface);
+    border-radius: 2px;
+    margin-top: 14px;
+    overflow: hidden;
+  }
+  .green-score-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: var(--green);
+    transition: width 0.8s ease;
+  }
+
+  .results-title {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    text-transform: uppercase;
+    display: none;
+  }
+  .results-title.show { display: block; }
+
+  /* ── FEATURES GRID ── */
+  .features-section {
+    padding: 80px 48px 120px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .features-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    margin-top: 48px;
+  }
+
+  .feature-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 32px;
+    transition: border-color 0.2s;
+  }
+  .feature-card:hover { border-color: rgba(74,222,128,0.35); }
+
+  .feature-icon {
+    width: 48px; height: 48px;
+    background: var(--green-glow);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    margin-bottom: 20px;
+  }
+
+  .feature-name {
+    font-family: var(--serif);
+    font-size: 20px;
+    margin-bottom: 10px;
+  }
+
+  .feature-desc {
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  .feature-tag {
+    display: inline-block;
+    margin-top: 16px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: var(--green);
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border: 1px solid rgba(74,222,128,0.25);
+    border-radius: 6px;
+  }
+
+  /* ── EMISSIONS COMPARE ── */
+  .compare-section {
+    padding: 80px 48px 120px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .compare-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 12px;
+    margin-top: 48px;
+    align-items: end;
+  }
+
+  .compare-bar-wrap { text-align: center; }
+
+  .compare-bar {
+    border-radius: 8px 8px 0 0;
+    margin: 0 auto 10px;
+    width: 48px;
+    transition: height 1s ease;
+    position: relative;
+  }
+
+  .compare-bar-label {
+    font-size: 18px;
+    display: block;
+    margin-bottom: 6px;
+  }
+
+  .compare-bar-val {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  .compare-bar-name {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 6px;
+    line-height: 1.3;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    padding: 40px 48px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  /* ── ANIMATIONS ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes pulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(74,222,128,0.0); }
+    50%      { box-shadow: 0 0 0 8px rgba(74,222,128,0.0); }
+  }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed;
+    bottom: 32px; right: 32px;
+    background: var(--surface);
+    border: 1px solid var(--green);
+    border-radius: 12px;
+    padding: 16px 24px;
+    font-size: 14px;
+    color: var(--green);
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.05em;
+    transform: translateY(20px);
+    opacity: 0;
+    transition: all 0.3s;
+    z-index: 999;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  @media (max-width: 900px) {
+    .planner-card { grid-template-columns: 1fr; }
+    .planner-form-side { border-right: none; border-bottom: 1px solid var(--border); }
+    .features-grid { grid-template-columns: 1fr; }
+    .compare-grid { grid-template-columns: repeat(3, 1fr); }
+    nav { padding: 16px 24px; }
+    .planner-section, .compare-section { padding: 60px 24px; }
+    .features-section { padding: 60px 24px; }
+    .hero-actions { flex-direction: column; }
+    .stats-bar { flex-direction: column; }
+    .stat { border-right: none; border-bottom: 1px solid var(--border); }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">SROS</div>
+  <div class="nav-links">
+    <a href="#planner">Planner</a>
+    <a href="#features">Features</a>
+    <a href="#compare">Compare</a>
+    <a href="/dashboard">Dashboard</a>
+  </div>
+  <a href="/dashboard" class="nav-cta">Open Dashboard</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-eyebrow">Sustainable Route Optimization System</div>
+  <h1>Route smarter.<br><em>Emit less.</em></h1>
+  <p class="hero-sub">
+    AI-powered routing that balances speed, cost, and carbon footprint — helping you make every journey greener.
+  </p>
+  <div class="hero-actions">
+    <a href="#planner" class="btn-primary">Plan a Route</a>
+    <a href="/dashboard" class="btn-ghost">View Dashboard</a>
+  </div>
+  <div class="stats-bar">
+    <div class="stat">
+      <div class="stat-num" id="counter-routes">0</div>
+      <div class="stat-label">Routes Analyzed</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num" id="counter-co2">0</div>
+      <div class="stat-label">kg CO₂ Saved</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num" id="counter-trees">0</div>
+      <div class="stat-label">Trees Equivalent</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num" id="counter-cities">0</div>
+      <div class="stat-label">Cities Supported</div>
+    </div>
+  </div>
+</section>
+
+<!-- ROUTE PLANNER -->
+<section class="planner-section" id="planner">
+  <div class="section-label">Route Planner</div>
+  <div class="section-title">Find your greenest path</div>
+
+  <div class="planner-card">
+    <div class="planner-form-side">
+      <div>
+        <div class="planner-title">Plan a journey</div>
+        <div style="font-size:13px;color:var(--muted);margin-top:6px;">Enter cities from our supported list — Delhi, Mumbai, Bangalore, Pune, Hyderabad, Chennai, Kolkata, Jaipur, Noida, and more.</div>
+      </div>
+
+      <div class="field-group">
+        <div class="field-label">Origin</div>
+        <input class="field-input" id="origin" type="text" placeholder="e.g. Delhi" list="cities-list">
+      </div>
+
+      <div class="field-group">
+        <div class="field-label">Destination</div>
+        <input class="field-input" id="destination" type="text" placeholder="e.g. Agra" list="cities-list">
+      </div>
+
+      <datalist id="cities-list">
+        <option value="Delhi"><option value="Mumbai"><option value="Bangalore">
+        <option value="Hyderabad"><option value="Pune"><option value="Chennai">
+        <option value="Kolkata"><option value="Jaipur"><option value="Noida">
+        <option value="Gurgaon"><option value="Ahmedabad"><option value="Lucknow">
+        <option value="Agra"><option value="Chandigarh">
+      </datalist>
+
+      <div class="field-group">
+        <div class="field-label">Vehicle Type</div>
+        <div class="vehicle-grid" id="vehicle-grid">
+          <button class="vehicle-btn active" data-vehicle="car_petrol">
+            <span class="vehicle-icon">🚗</span>
+            <span class="vehicle-name">Petrol</span>
+          </button>
+          <button class="vehicle-btn" data-vehicle="car_diesel">
+            <span class="vehicle-icon">🚙</span>
+            <span class="vehicle-name">Diesel</span>
+          </button>
+          <button class="vehicle-btn" data-vehicle="car_electric">
+            <span class="vehicle-icon">⚡</span>
+            <span class="vehicle-name">Electric</span>
+          </button>
+          <button class="vehicle-btn" data-vehicle="car_cng">
+            <span class="vehicle-icon">🚘</span>
+            <span class="vehicle-name">CNG</span>
+          </button>
+          <button class="vehicle-btn" data-vehicle="bike_petrol">
+            <span class="vehicle-icon">🏍️</span>
+            <span class="vehicle-name">Bike</span>
+          </button>
+          <button class="vehicle-btn" data-vehicle="bicycle">
+            <span class="vehicle-icon">🚲</span>
+            <span class="vehicle-name">Cycle</span>
+          </button>
+          <button class="vehicle-btn" data-vehicle="public_bus">
+            <span class="vehicle-icon">🚌</span>
+            <span class="vehicle-name">Bus</span>
+          </button>
+        </div>
+      </div>
+
+      <button class="calc-btn" id="calc-btn" onclick="optimizeRoutes()">
+        <div class="spinner"></div>
+        <span class="btn-text">⚡ Calculate Green Routes</span>
+      </button>
+    </div>
+
+    <div class="planner-results-side">
+      <div class="results-title" id="results-title">Route Options</div>
+      <div class="results-placeholder" id="results-placeholder">
+        <div class="placeholder-icon">🗺️</div>
+        <div style="font-size:14px;">Enter origin & destination<br>to see route options</div>
+      </div>
+      <div id="route-cards"></div>
+      <div id="impact-box" style="display:none; margin-top:8px; padding:16px 20px; background:var(--green-glow); border:1px solid rgba(74,222,128,0.3); border-radius:12px;">
+        <div style="font-family:var(--mono);font-size:10px;letter-spacing:0.1em;color:var(--green);text-transform:uppercase;margin-bottom:8px;">Eco Impact (Greenest vs Fastest)</div>
+        <div id="impact-text" style="font-size:14px;line-height:1.6;color:var(--text);"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features-section" id="features">
+  <div class="features-inner">
+    <div class="section-label">What it does</div>
+    <div class="section-title">Built for impact</div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">🧭</div>
+        <div class="feature-name">Smart Route Engine</div>
+        <div class="feature-desc">Graph-based routing using Haversine distance + road network heuristics. Generates fastest, balanced, and greenest route variants simultaneously.</div>
+        <span class="feature-tag">NetworkX · OSMnx</span>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📊</div>
+        <div class="feature-name">CO₂ Calculator</div>
+        <div class="feature-desc">Per-km emission factors from ICCT & EEA data for 7 vehicle types. Computes real savings against a petrol baseline and tree absorption equivalents.</div>
+        <span class="feature-tag">Science-backed</span>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">⚖️</div>
+        <div class="feature-name">Route Comparison</div>
+        <div class="feature-desc">Side-by-side comparison of time, cost, and emissions across all 3 route types — helping users make informed, conscious choices.</div>
+        <span class="feature-tag">3-way Tradeoff</span>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🌱</div>
+        <div class="feature-name">Green Score</div>
+        <div class="feature-desc">Every route gets a 0–100 sustainability score computed from emission intensity relative to baseline. Visual progress bar for instant understanding.</div>
+        <span class="feature-tag">0–100 Scale</span>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🏆</div>
+        <div class="feature-name">Eco Leaderboard</div>
+        <div class="feature-desc">Gamified sustainability tracking. Users accumulate CO₂ savings across trips and compete on a live leaderboard — driving behavioral change.</div>
+        <span class="feature-tag">Gamification</span>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📈</div>
+        <div class="feature-name">Analytics Dashboard</div>
+        <div class="feature-desc">Live charts showing emission breakdowns per vehicle type, cumulative savings over time, and city-level routing statistics.</div>
+        <span class="feature-tag">Plotly · Flask</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- EMISSIONS COMPARE -->
+<section class="compare-section" id="compare">
+  <div class="section-label">Vehicle Emissions</div>
+  <div class="section-title">How each vehicle compares</div>
+  <p style="color:var(--muted);font-size:14px;max-width:480px;margin-bottom:8px;">CO₂ emissions per 100 km. Figures sourced from ICCT and EEA average fleet data.</p>
+
+  <div class="compare-grid" id="compare-grid">
+    <!-- Rendered by JS -->
+  </div>
+</section>
+
+<footer>
+  <div class="logo">SROS — v1.0</div>
+  <div>Sustainable Route Optimization System · Mini Project</div>
+  <div style="font-family:var(--mono);font-size:11px;">Built with Flask · Python · NetworkX</div>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ── Vehicle selection ──
+  let selectedVehicle = 'car_petrol';
+  document.querySelectorAll('.vehicle-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.vehicle-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedVehicle = btn.dataset.vehicle;
+    });
+  });
+
+  // ── Counter animation ──
+  function animateCounter(el, target, suffix = '') {
+    let start = 0;
+    const duration = 1800;
+    const step = target / (duration / 16);
+    const timer = setInterval(() => {
+      start = Math.min(start + step, target);
+      el.textContent = Math.floor(start).toLocaleString() + suffix;
+      if (start >= target) clearInterval(timer);
+    }, 16);
+  }
+  window.addEventListener('load', () => {
+    setTimeout(() => {
+      animateCounter(document.getElementById('counter-routes'), 4823);
+      animateCounter(document.getElementById('counter-co2'),   12340);
+      animateCounter(document.getElementById('counter-trees'), 587);
+      animateCounter(document.getElementById('counter-cities'), 17);
+    }, 900);
+  });
+
+  // ── Route optimization call ──
+  async function optimizeRoutes() {
+    const origin = document.getElementById('origin').value.trim();
+    const dest   = document.getElementById('destination').value.trim();
+
+    if (!origin || !dest) { showToast('Please enter both origin and destination'); return; }
+
+    const btn = document.getElementById('calc-btn');
+    btn.classList.add('loading');
+    btn.disabled = true;
+
+    try {
+      const res = await fetch('/api/optimize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ origin, destination: dest, vehicle: selectedVehicle, priority: 'balanced' })
+      });
+
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || 'Server error');
+      renderRoutes(data.routes);
+      showToast('✓ Routes calculated successfully');
+    } catch (e) {
+      showToast('Error: ' + e.message);
+    } finally {
+      btn.classList.remove('loading');
+      btn.disabled = false;
+    }
+  }
+
+  function renderRoutes(routes) {
+    document.getElementById('results-placeholder').style.display = 'none';
+    document.getElementById('results-title').classList.add('show');
+
+    const container = document.getElementById('route-cards');
+    container.innerHTML = '';
+
+    routes.forEach((route, i) => {
+      const em = route.emissions;
+      const card = document.createElement('div');
+      card.className = 'route-card show' + (i === 1 ? ' active' : '');
+
+      const colors = { fastest: '#ef4444', balanced: '#f59e0b', greenest: '#4ade80' };
+      const color  = colors[route.type] || '#4ade80';
+
+      card.innerHTML = `
+        <div class="route-card-header">
+          <div style="font-family:var(--sans);font-size:15px;font-weight:500;">${route.label}</div>
+          <div class="route-type-badge" style="background:${color}20;color:${color};">${route.type}</div>
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">${route.description}</div>
+        <div class="route-meta">
+          <div class="route-metric">
+            <div class="route-metric-val" style="color:${color};">${route.distance_km} km</div>
+            <div class="route-metric-key">Distance</div>
+          </div>
+          <div class="route-metric">
+            <div class="route-metric-val">${route.time_min} min</div>
+            <div class="route-metric-key">Est. Time</div>
+          </div>
+          <div class="route-metric">
+            <div class="route-metric-val" style="color:${em.co2_kg === 0 ? '#4ade80' : 'inherit'}">${em.co2_kg} kg</div>
+            <div class="route-metric-key">CO₂</div>
+          </div>
+        </div>
+        <div class="green-score-bar">
+          <div class="green-score-fill" style="width:${em.green_score}%;background:${color};"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:6px;">
+          <span style="font-family:var(--mono);font-size:10px;color:var(--muted);">Green Score</span>
+          <span style="font-family:var(--mono);font-size:10px;color:${color};">${em.green_score}/100</span>
+        </div>
+        <div style="margin-top:10px;font-family:var(--mono);font-size:11px;color:var(--muted);">
+          ₹${em.fuel_cost_inr} fuel cost · ${em.co2_saved_kg} kg CO₂ saved vs petrol
+        </div>
+      `;
+
+      card.addEventListener('click', () => {
+        document.querySelectorAll('.route-card').forEach(c => c.classList.remove('active'));
+        card.classList.add('active');
+      });
+
+      container.appendChild(card);
+    });
+
+    // Impact box
+    const fastest = routes[0];
+    const greenest = routes[routes.length - 1];
+    const savedKg  = (greenest.emissions.co2_saved_kg - fastest.emissions.co2_saved_kg).toFixed(2);
+    const trees    = greenest.emissions.trees_equivalent;
+    const box      = document.getElementById('impact-box');
+    const txt      = document.getElementById('impact-text');
+    box.style.display = 'block';
+    txt.innerHTML = `Choosing the <strong style="color:var(--green)">Greenest Route</strong> over Fastest saves <strong>${Math.abs(savedKg)} kg CO₂</strong> on this trip — equivalent to <strong>${trees} trees</strong> absorbing carbon for a day.`;
+  }
+
+  // ── Emissions bar chart ──
+  const vehicles = [
+    { name: 'Petrol Car',  icon: '🚗', co2: 171, color: '#ef4444' },
+    { name: 'Diesel Car',  icon: '🚙', co2: 145, color: '#f97316' },
+    { name: 'CNG Car',     icon: '🚘', co2: 96,  color: '#eab308' },
+    { name: 'Bike',        icon: '🏍️', co2: 83,  color: '#a855f7' },
+    { name: 'Public Bus',  icon: '🚌', co2: 14,  color: '#3b82f6' },
+    { name: 'Electric',    icon: '⚡', co2: 0,   color: '#22c55e' },
+    { name: 'Bicycle',     icon: '🚲', co2: 0,   color: '#14b8a6' },
+  ];
+
+  const maxCo2   = Math.max(...vehicles.map(v => v.co2));
+  const maxHeight = 160;
+  const grid = document.getElementById('compare-grid');
+
+  vehicles.forEach(v => {
+    const barH = v.co2 === 0 ? 8 : Math.max(8, (v.co2 / maxCo2) * maxHeight);
+    const el = document.createElement('div');
+    el.className = 'compare-bar-wrap';
+    el.innerHTML = `
+      <span class="compare-bar-label">${v.icon}</span>
+      <div class="compare-bar" style="height:${barH}px;background:${v.color}20;border:1px solid ${v.color}50;border-bottom:2px solid ${v.color};"></div>
+      <div class="compare-bar-val">${v.co2 === 0 ? '0 g' : v.co2+'g'}</div>
+      <div class="compare-bar-name">${v.name}</div>
+    `;
+    grid.appendChild(el);
+  });
+
+  // ── Toast ──
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3000);
+  }
+
+  // ── Enter key trigger ──
+  ['origin', 'destination'].forEach(id => {
+    document.getElementById(id).addEventListener('keydown', e => {
+      if (e.key === 'Enter') optimizeRoutes();
+    });
+  });
+</script>
+</body>
+</html>
