@@ -4,623 +4,253 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SROS — Sustainable Route Optimization System</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<meta name="description" content="AI-powered routing that balances speed, cost, and carbon footprint — helping you make every journey greener.">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&family=Inter:wght@300;400;500&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<!-- Leaflet -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
   :root {
-    --bg: #0a0f0d;
-    --surface: #111810;
-    --surface2: #182016;
-    --green: #4ade80;
+    --bg: #0a1628;
+    --surface: #0f2035;
+    --surface2: #152a42;
+    --green: #22c55e;
     --green-dim: #16a34a;
-    --green-glow: rgba(74,222,128,0.15);
-    --amber: #fbbf24;
-    --red: #f87171;
-    --text: #e8f0ea;
-    --muted: #6b7c6e;
-    --border: rgba(74,222,128,0.12);
-    --serif: 'DM Serif Display', serif;
-    --sans: 'DM Sans', sans-serif;
+    --green-glow: rgba(34,197,94,0.15);
+    --amber: #f59e0b;
+    --red: #ef4444;
+    --text: #f1f5f9;
+    --muted: #94a3b8;
+    --border: rgba(34,197,94,0.2);
+    --serif: 'Outfit', sans-serif;
+    --sans: 'Inter', sans-serif;
     --mono: 'Space Mono', monospace;
     --radius: 16px;
   }
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+  @keyframes meshShift {
+    0% { background-position: 0% 0%; }
+    50% { background-position: 100% 100%; }
+    100% { background-position: 0% 0%; }
+  }
+
   body {
     font-family: var(--sans);
-    background: var(--bg);
+    background-color: #060e1a;
+    background-image:
+      radial-gradient(ellipse 120% 60% at 50% -10%, rgba(34,197,94,0.12) 0%, transparent 70%),
+      radial-gradient(ellipse 80% 60% at 0% 100%, rgba(14,50,80,0.7) 0%, transparent 60%),
+      radial-gradient(ellipse 80% 60% at 100% 70%, rgba(8,60,45,0.6) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 50% at 80% 20%, rgba(34,197,94,0.05) 0%, transparent 50%);
+    background-size: 200% 200%;
+    animation: meshShift 25s ease infinite;
     color: var(--text);
     min-height: 100vh;
     overflow-x: hidden;
   }
 
-  /* ── NOISE TEXTURE ── */
   body::before {
     content: '';
-    position: fixed;
-    inset: 0;
+    position: fixed; inset: 0;
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
-    pointer-events: none;
-    z-index: 0;
-    opacity: 0.4;
+    pointer-events: none; z-index: 0; opacity: 0.25;
   }
 
   /* ── NAV ── */
   nav {
-    position: fixed;
-    top: 0; left: 0; right: 0;
-    z-index: 100;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
     padding: 20px 48px;
-    backdrop-filter: blur(12px);
+    backdrop-filter: blur(20px);
     border-bottom: 1px solid var(--border);
-    background: rgba(10,15,13,0.7);
+    background: rgba(6,14,26,0.9);
   }
-
-  .logo {
-    font-family: var(--mono);
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 0.15em;
-    color: var(--green);
-    text-transform: uppercase;
-  }
-
+  .logo { font-family: var(--mono); font-size: 13px; font-weight: 700; letter-spacing: 0.15em; color: var(--green); text-transform: uppercase; }
   .nav-links { display: flex; gap: 32px; }
-  .nav-links a {
-    font-size: 13px;
-    color: var(--muted);
-    text-decoration: none;
-    letter-spacing: 0.05em;
-    transition: color 0.2s;
-  }
+  .nav-links a { font-size: 13px; color: var(--muted); text-decoration: none; letter-spacing: 0.05em; transition: color 0.2s; }
   .nav-links a:hover { color: var(--text); }
-
   .nav-cta {
-    font-family: var(--mono);
-    font-size: 12px;
-    padding: 10px 22px;
-    border: 1px solid var(--green);
-    color: var(--green);
-    background: transparent;
-    border-radius: 8px;
-    cursor: pointer;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    transition: all 0.2s;
-    text-decoration: none;
+    font-family: var(--mono); font-size: 12px; padding: 10px 22px;
+    border: 1px solid var(--green); color: var(--green);
+    background: transparent; border-radius: 8px; cursor: pointer;
+    letter-spacing: 0.08em; text-transform: uppercase; transition: all 0.2s;
+    text-decoration: none; display: flex; align-items: center; gap: 8px;
   }
-  .nav-cta:hover {
-    background: var(--green-glow);
-    box-shadow: 0 0 20px rgba(74,222,128,0.2);
-  }
+  .nav-cta:hover { background: var(--green-glow); box-shadow: 0 0 20px rgba(74,222,128,0.2); }
+  .nav-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); display: none; }
+  .nav-dot.visible { display: inline-block; }
 
   /* ── HERO ── */
   .hero {
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 120px 24px 80px;
-    position: relative;
+    min-height: 100vh; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center; padding: 120px 24px 80px; position: relative;
   }
-
-  /* Radial glow behind hero */
   .hero::after {
-    content: '';
-    position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%,-60%);
-    width: 600px; height: 600px;
-    background: radial-gradient(circle, rgba(74,222,128,0.06) 0%, transparent 70%);
+    content: ''; position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%,-60%); width: 700px; height: 700px;
+    background: radial-gradient(circle, rgba(34,197,94,0.15) 0%, transparent 70%);
     pointer-events: none;
   }
-
-  .hero-eyebrow {
-    font-family: var(--mono);
-    font-size: 11px;
-    letter-spacing: 0.25em;
-    color: var(--green);
-    text-transform: uppercase;
-    margin-bottom: 24px;
-    opacity: 0;
-    animation: fadeUp 0.8s ease 0.1s forwards;
-  }
-
-  .hero h1 {
-    font-family: var(--serif);
-    font-size: clamp(52px, 8vw, 108px);
-    line-height: 1.0;
-    letter-spacing: -0.02em;
-    color: var(--text);
-    max-width: 900px;
-    opacity: 0;
-    animation: fadeUp 0.9s ease 0.25s forwards;
-  }
-
-  .hero h1 em {
-    font-style: italic;
-    color: var(--green);
-  }
-
-  .hero-sub {
-    margin-top: 28px;
-    font-size: 16px;
-    line-height: 1.7;
-    color: var(--muted);
-    max-width: 480px;
-    font-weight: 300;
-    opacity: 0;
-    animation: fadeUp 0.9s ease 0.4s forwards;
-  }
-
-  .hero-actions {
-    margin-top: 48px;
-    display: flex;
-    gap: 16px;
-    align-items: center;
-    opacity: 0;
-    animation: fadeUp 0.9s ease 0.55s forwards;
-  }
-
-  .btn-primary {
-    font-family: var(--mono);
-    font-size: 13px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    padding: 16px 36px;
-    background: var(--green);
-    color: #0a0f0d;
-    border: none;
-    border-radius: 10px;
-    cursor: pointer;
-    font-weight: 700;
-    transition: all 0.2s;
-    text-decoration: none;
-    display: inline-block;
-  }
-  .btn-primary:hover {
-    background: #86efac;
-    transform: translateY(-1px);
-    box-shadow: 0 8px 30px rgba(74,222,128,0.35);
-  }
-
-  .btn-ghost {
-    font-family: var(--mono);
-    font-size: 13px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    padding: 16px 36px;
-    background: transparent;
-    color: var(--muted);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    cursor: pointer;
-    transition: all 0.2s;
-    text-decoration: none;
-  }
+  .hero-eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: 0.25em; color: var(--green); text-transform: uppercase; margin-bottom: 24px; opacity: 0; animation: fadeUp 0.8s ease 0.1s forwards; }
+  .hero h1 { font-family: var(--serif); font-size: clamp(52px,8vw,108px); line-height: 1.0; letter-spacing: -0.02em; color: var(--text); max-width: 900px; opacity: 0; animation: fadeUp 0.9s ease 0.25s forwards; }
+  .hero h1 em { font-style: italic; color: var(--green); }
+  .hero-sub { margin-top: 28px; font-size: 16px; line-height: 1.7; color: var(--muted); max-width: 480px; font-weight: 300; opacity: 0; animation: fadeUp 0.9s ease 0.4s forwards; }
+  .hero-actions { margin-top: 48px; display: flex; gap: 16px; align-items: center; opacity: 0; animation: fadeUp 0.9s ease 0.55s forwards; }
+  .btn-primary { font-family: var(--mono); font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; padding: 16px 36px; background: var(--green); color: #0a0f0d; border: none; border-radius: 10px; cursor: pointer; font-weight: 700; transition: all 0.2s; text-decoration: none; display: inline-block; }
+  .btn-primary:hover { background: #86efac; transform: translateY(-1px); box-shadow: 0 8px 30px rgba(74,222,128,0.35); }
+  .btn-ghost { font-family: var(--mono); font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; padding: 16px 36px; background: transparent; color: var(--muted); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; transition: all 0.2s; text-decoration: none; }
   .btn-ghost:hover { color: var(--text); border-color: rgba(74,222,128,0.3); }
-
-  /* ── STATS BAR ── */
-  .stats-bar {
-    display: flex;
-    gap: 0;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    overflow: hidden;
-    margin-top: 72px;
-    opacity: 0;
-    animation: fadeUp 0.9s ease 0.7s forwards;
-  }
-
-  .stat {
-    padding: 20px 36px;
-    border-right: 1px solid var(--border);
-    text-align: center;
-  }
+  .stats-bar { display: flex; gap: 0; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-top: 72px; opacity: 0; animation: fadeUp 0.9s ease 0.7s forwards; }
+  .stat { padding: 20px 36px; border-right: 1px solid var(--border); text-align: center; }
   .stat:last-child { border-right: none; }
+  .stat-num { font-family: var(--mono); font-size: 26px; font-weight: 700; color: var(--green); line-height: 1; }
+  .stat-label { font-size: 11px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 6px; }
 
-  .stat-num {
-    font-family: var(--mono);
-    font-size: 26px;
-    font-weight: 700;
-    color: var(--green);
-    line-height: 1;
+  /* ── PLANNER ── */
+  .planner-section { padding: 80px 48px 120px; max-width: 1200px; margin: 0 auto; }
+  .section-label { font-family: var(--mono); font-size: 11px; letter-spacing: 0.2em; color: var(--green); text-transform: uppercase; margin-bottom: 16px; }
+  .section-title { font-family: var(--serif); font-size: clamp(32px,4vw,52px); line-height: 1.1; margin-bottom: 48px; }
+  .planner-card { 
+    background: rgba(15, 32, 53, 0.9); 
+    backdrop-filter: blur(20px); 
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--border); 
+    border-radius: 24px; 
+    overflow: hidden; 
+    display: grid; 
+    grid-template-columns: 1fr 1fr; 
+    min-height: 520px; 
+    box-shadow: 0 25px 60px rgba(0,0,0,0.6), 0 0 80px rgba(34,197,94,0.04); 
   }
-
-  .stat-label {
-    font-size: 11px;
-    color: var(--muted);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    margin-top: 6px;
-  }
-
-  /* ── ROUTE PLANNER SECTION ── */
-  .planner-section {
-    padding: 80px 48px 120px;
-    max-width: 1200px;
-    margin: 0 auto;
-  }
-
-  .section-label {
-    font-family: var(--mono);
-    font-size: 11px;
-    letter-spacing: 0.2em;
-    color: var(--green);
-    text-transform: uppercase;
-    margin-bottom: 16px;
-  }
-
-  .section-title {
-    font-family: var(--serif);
-    font-size: clamp(32px, 4vw, 52px);
-    line-height: 1.1;
-    margin-bottom: 48px;
-  }
-
-  /* Planner card */
-  .planner-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 24px;
-    overflow: hidden;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    min-height: 520px;
-  }
-
-  .planner-form-side {
-    padding: 48px;
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-    border-right: 1px solid var(--border);
-  }
-
-  .planner-title {
-    font-family: var(--serif);
-    font-size: 28px;
-    margin-bottom: 8px;
-  }
-
+  .planner-form-side { padding: 48px; display: flex; flex-direction: column; gap: 24px; border-right: 1px solid var(--border); }
+  .planner-title { font-family: var(--serif); font-size: 28px; margin-bottom: 8px; }
   .field-group { display: flex; flex-direction: column; gap: 8px; }
-
-  .field-label {
-    font-family: var(--mono);
-    font-size: 10px;
-    letter-spacing: 0.15em;
-    color: var(--muted);
-    text-transform: uppercase;
-  }
-
-  .field-input {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 14px 18px;
-    color: var(--text);
-    font-family: var(--sans);
-    font-size: 15px;
-    outline: none;
-    transition: border-color 0.2s;
-    width: 100%;
-  }
+  .field-label { font-family: var(--mono); font-size: 10px; letter-spacing: 0.15em; color: var(--muted); text-transform: uppercase; }
+  .field-input { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 14px 18px; color: var(--text); font-family: var(--sans); font-size: 15px; outline: none; transition: border-color 0.2s; width: 100%; }
   .field-input:focus { border-color: var(--green); box-shadow: 0 0 0 3px var(--green-glow); }
   .field-input::placeholder { color: var(--muted); font-size: 14px; }
-
   .field-input option { background: var(--surface); }
-
-  /* Vehicle grid */
-  .vehicle-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
-  }
-
-  .vehicle-btn {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 12px 8px;
-    cursor: pointer;
-    text-align: center;
-    transition: all 0.2s;
-    color: var(--muted);
-    font-family: var(--sans);
-  }
+  .vehicle-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .vehicle-btn { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 12px 8px; cursor: pointer; text-align: center; transition: all 0.2s; color: var(--muted); font-family: var(--sans); }
   .vehicle-btn:hover { border-color: rgba(74,222,128,0.4); color: var(--text); }
-  .vehicle-btn.active {
-    border-color: var(--green);
-    background: var(--green-glow);
-    color: var(--green);
-  }
+  .vehicle-btn.active { border-color: var(--green); background: var(--green-glow); color: var(--green); }
   .vehicle-icon { font-size: 20px; display: block; margin-bottom: 4px; }
   .vehicle-name { font-size: 10px; letter-spacing: 0.05em; }
-
-  .calc-btn {
-    margin-top: auto;
-    font-family: var(--mono);
-    font-size: 13px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    padding: 18px;
-    background: var(--green);
-    color: #0a0f0d;
-    border: none;
-    border-radius: 12px;
-    cursor: pointer;
-    font-weight: 700;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-  }
-  .calc-btn:hover {
-    background: #86efac;
-    box-shadow: 0 8px 30px rgba(74,222,128,0.3);
-  }
+  .calc-btn { margin-top: auto; font-family: var(--mono); font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase; padding: 18px; background: var(--green); color: #0a0f0d; border: none; border-radius: 12px; cursor: pointer; font-weight: 700; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 10px; }
+  .calc-btn:hover { background: #86efac; box-shadow: 0 8px 30px rgba(74,222,128,0.3); }
   .calc-btn:disabled { opacity: 0.5; cursor: not-allowed; }
   .calc-btn .spinner { width: 16px; height: 16px; border: 2px solid rgba(0,0,0,0.3); border-top-color: #0a0f0d; border-radius: 50%; animation: spin 0.6s linear infinite; display: none; }
   .calc-btn.loading .spinner { display: block; }
   .calc-btn.loading .btn-text { display: none; }
-
-  /* Results side */
-  .planner-results-side {
-    padding: 48px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    position: relative;
-  }
-
-  .results-placeholder {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 16px;
-    color: var(--muted);
-    text-align: center;
-  }
-
-  .placeholder-icon {
-    width: 64px; height: 64px;
-    border: 2px dashed var(--border);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 24px;
-  }
-
-  .route-card {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 18px 20px;
-    cursor: pointer;
-    transition: all 0.25s;
-    display: none;
-  }
+  .planner-results-side { padding: 48px; display: flex; flex-direction: column; gap: 16px; position: relative; }
+  .results-placeholder { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; color: var(--muted); text-align: center; }
+  .placeholder-icon { width: 64px; height: 64px; border: 2px dashed var(--border); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; }
+  .route-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; cursor: pointer; transition: all 0.25s; display: none; }
   .route-card:hover { border-color: rgba(74,222,128,0.35); transform: translateX(4px); }
   .route-card.active { border-left: 3px solid var(--green); }
   .route-card.show { display: block; }
-
-  .route-card-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 12px;
-  }
-
-  .route-type-badge {
-    font-family: var(--mono);
-    font-size: 10px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    padding: 4px 10px;
-    border-radius: 6px;
-  }
-
-  .route-meta {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-    margin-top: 10px;
-  }
-
+  .route-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .route-type-badge { font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; }
+  .route-meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 10px; }
   .route-metric { text-align: center; }
-  .route-metric-val {
-    font-family: var(--mono);
-    font-size: 15px;
-    font-weight: 700;
-    line-height: 1;
-  }
+  .route-metric-val { font-family: var(--mono); font-size: 15px; font-weight: 700; line-height: 1; }
   .route-metric-key { font-size: 10px; color: var(--muted); margin-top: 4px; letter-spacing: 0.06em; }
-
-  .green-score-bar {
-    height: 4px;
-    background: var(--surface);
-    border-radius: 2px;
-    margin-top: 14px;
-    overflow: hidden;
-  }
-  .green-score-fill {
-    height: 100%;
-    border-radius: 2px;
-    background: var(--green);
-    transition: width 0.8s ease;
-  }
-
-  .results-title {
-    font-family: var(--mono);
-    font-size: 10px;
-    letter-spacing: 0.15em;
-    color: var(--muted);
-    text-transform: uppercase;
-    display: none;
-  }
+  .green-score-bar { height: 4px; background: var(--surface); border-radius: 2px; margin-top: 14px; overflow: hidden; }
+  .green-score-fill { height: 100%; border-radius: 2px; background: var(--green); transition: width 0.8s ease; }
+  .results-title { font-family: var(--mono); font-size: 10px; letter-spacing: 0.15em; color: var(--muted); text-transform: uppercase; display: none; }
   .results-title.show { display: block; }
 
-  /* ── FEATURES GRID ── */
-  .features-section {
-    padding: 80px 48px 120px;
-    background: var(--surface);
-    border-top: 1px solid var(--border);
-    border-bottom: 1px solid var(--border);
-  }
+  /* ── MAP ── */
+  #map-section { padding: 0 48px 80px; max-width: 1200px; margin: 0 auto; }
+  #map-section .section-label { margin-bottom: 16px; }
+  #map-container { position: relative; border-radius: 20px; overflow: hidden; border: 1px solid var(--border); }
+  #map { height: 460px; width: 100%; background: #0a0f0d; }
+  #map-controls { position: absolute; top: 16px; right: 16px; z-index: 1000; display: flex; gap: 8px; }
+  .map-ctrl-btn { font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; padding: 8px 14px; background: rgba(10,15,13,0.85); border: 1px solid var(--border); border-radius: 8px; color: var(--muted); cursor: pointer; backdrop-filter: blur(8px); transition: all 0.2s; }
+  .map-ctrl-btn:hover { border-color: var(--green); color: var(--green); }
 
-  .features-inner {
-    max-width: 1200px;
-    margin: 0 auto;
-  }
+  /* ── FEATURES ── */
+  .features-section { padding: 80px 48px 120px; background: rgba(14,22,26,0.9); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .features-inner { max-width: 1200px; margin: 0 auto; }
+  .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 48px; }
+  .feature-card { background: rgba(20,30,34,0.8); backdrop-filter: blur(16px); border: 1px solid var(--border); border-radius: var(--radius); padding: 32px; transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+  .feature-card:hover { border-color: var(--green); transform: translateY(-4px); box-shadow: 0 16px 40px rgba(0,0,0,0.5), 0 0 20px rgba(52,211,153,0.15); }
+  .feature-icon { width: 48px; height: 48px; background: var(--green-glow); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 20px; }
+  .feature-name { font-family: var(--serif); font-size: 20px; margin-bottom: 10px; }
+  .feature-desc { font-size: 14px; color: var(--muted); line-height: 1.6; }
+  .feature-tag { display: inline-block; margin-top: 16px; font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; color: var(--green); text-transform: uppercase; padding: 4px 10px; border: 1px solid rgba(74,222,128,0.25); border-radius: 6px; }
 
-  .features-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 24px;
-    margin-top: 48px;
-  }
-
-  .feature-card {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 32px;
-    transition: border-color 0.2s;
-  }
-  .feature-card:hover { border-color: rgba(74,222,128,0.35); }
-
-  .feature-icon {
-    width: 48px; height: 48px;
-    background: var(--green-glow);
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 22px;
-    margin-bottom: 20px;
-  }
-
-  .feature-name {
-    font-family: var(--serif);
-    font-size: 20px;
-    margin-bottom: 10px;
-  }
-
-  .feature-desc {
-    font-size: 14px;
-    color: var(--muted);
-    line-height: 1.6;
-  }
-
-  .feature-tag {
-    display: inline-block;
-    margin-top: 16px;
-    font-family: var(--mono);
-    font-size: 10px;
-    letter-spacing: 0.1em;
-    color: var(--green);
-    text-transform: uppercase;
-    padding: 4px 10px;
-    border: 1px solid rgba(74,222,128,0.25);
-    border-radius: 6px;
-  }
-
-  /* ── EMISSIONS COMPARE ── */
-  .compare-section {
-    padding: 80px 48px 120px;
-    max-width: 1200px;
-    margin: 0 auto;
-  }
-
-  .compare-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 12px;
-    margin-top: 48px;
-    align-items: end;
-  }
-
+  /* ── COMPARE ── */
+  .compare-section { padding: 80px 48px 120px; max-width: 1200px; margin: 0 auto; }
+  .compare-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 12px; margin-top: 48px; align-items: end; }
   .compare-bar-wrap { text-align: center; }
-
-  .compare-bar {
-    border-radius: 8px 8px 0 0;
-    margin: 0 auto 10px;
-    width: 48px;
-    transition: height 1s ease;
-    position: relative;
-  }
-
-  .compare-bar-label {
-    font-size: 18px;
-    display: block;
-    margin-bottom: 6px;
-  }
-
-  .compare-bar-val {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--muted);
-    margin-top: 4px;
-  }
-
-  .compare-bar-name {
-    font-size: 11px;
-    color: var(--muted);
-    margin-top: 6px;
-    line-height: 1.3;
-  }
+  .compare-bar { border-radius: 8px 8px 0 0; margin: 0 auto 10px; width: 48px; transition: height 1s ease; position: relative; }
+  .compare-bar-label { font-size: 18px; display: block; margin-bottom: 6px; }
+  .compare-bar-val { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .compare-bar-name { font-size: 11px; color: var(--muted); margin-top: 6px; line-height: 1.3; }
 
   /* ── FOOTER ── */
-  footer {
-    padding: 40px 48px;
-    border-top: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    color: var(--muted);
-    font-size: 13px;
-  }
+  footer { padding: 40px 48px; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: 13px; }
 
   /* ── ANIMATIONS ── */
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(24px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes spin { to { transform: rotate(360deg); } }
-  @keyframes pulse {
-    0%,100% { box-shadow: 0 0 0 0 rgba(74,222,128,0.0); }
-    50%      { box-shadow: 0 0 0 8px rgba(74,222,128,0.0); }
-  }
+  @keyframes slideUp { from { transform: translateY(80px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
   /* ── TOAST ── */
-  .toast {
-    position: fixed;
-    bottom: 32px; right: 32px;
-    background: var(--surface);
-    border: 1px solid var(--green);
-    border-radius: 12px;
-    padding: 16px 24px;
-    font-size: 14px;
-    color: var(--green);
-    font-family: var(--mono);
-    font-size: 12px;
-    letter-spacing: 0.05em;
-    transform: translateY(20px);
-    opacity: 0;
-    transition: all 0.3s;
-    z-index: 999;
-  }
+  .toast { position: fixed; bottom: 32px; right: 32px; background: var(--surface); border: 1px solid var(--green); border-radius: 12px; padding: 16px 24px; font-family: var(--mono); font-size: 12px; letter-spacing: 0.05em; color: var(--green); transform: translateY(20px); opacity: 0; transition: all 0.3s; z-index: 999; }
   .toast.show { transform: translateY(0); opacity: 1; }
+
+  /* ── AUTH MODAL ── */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(6px); z-index: 200; display: none; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal-box { background: var(--surface); border: 1px solid var(--border); border-radius: 24px; width: 440px; max-width: 95vw; padding: 40px; position: relative; box-shadow: 0 40px 100px rgba(0,0,0,0.5); }
+  .modal-close { position: absolute; top: 20px; right: 20px; background: none; border: none; color: var(--muted); font-size: 20px; cursor: pointer; transition: color 0.2s; }
+  .modal-close:hover { color: var(--text); }
+  .modal-tabs { display: flex; gap: 0; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 28px; }
+  .modal-tab { flex: 1; padding: 10px; background: transparent; border: none; color: var(--muted); font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; transition: all 0.2s; }
+  .modal-tab.active { background: var(--green-glow); color: var(--green); }
+  .modal-form { display: none; flex-direction: column; gap: 16px; }
+  .modal-form.active { display: flex; }
+  .modal-field { display: flex; flex-direction: column; gap: 6px; }
+  .modal-label { font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em; color: var(--muted); text-transform: uppercase; }
+  .modal-input { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; color: var(--text); font-size: 15px; outline: none; transition: border-color 0.2s; }
+  .modal-input:focus { border-color: var(--green); box-shadow: 0 0 0 3px var(--green-glow); }
+  .modal-btn { padding: 14px; font-family: var(--mono); font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 700; border: none; border-radius: 10px; cursor: pointer; transition: all 0.2s; }
+  .modal-btn-primary { background: var(--green); color: #0a0f0d; }
+  .modal-btn-primary:hover { background: #86efac; }
+  .modal-btn-google { background: var(--surface2); color: var(--text); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; gap: 10px; }
+  .modal-btn-google:hover { border-color: rgba(74,222,128,0.3); }
+  .modal-divider { text-align: center; font-size: 11px; color: var(--muted); position: relative; }
+  .modal-divider::before, .modal-divider::after { content: ''; position: absolute; top: 50%; width: 40%; height: 1px; background: var(--border); }
+  .modal-divider::before { left: 0; }
+  .modal-divider::after { right: 0; }
+  .modal-error { font-size: 12px; color: var(--red); font-family: var(--mono); min-height: 16px; }
+  .modal-link { font-size: 12px; color: var(--muted); text-align: center; cursor: pointer; }
+  .modal-link:hover { color: var(--green); }
+
+  /* ── SIGN-IN BANNER ── */
+  .signin-banner { margin-top: 8px; padding: 12px 16px; background: rgba(74,222,128,0.06); border: 1px solid rgba(74,222,128,0.2); border-radius: 10px; font-size: 13px; color: var(--muted); display: none; text-align: center; cursor: pointer; transition: all 0.2s; }
+  .signin-banner:hover { border-color: var(--green); color: var(--text); }
+  .signin-banner span { color: var(--green); font-weight: 500; }
+
+  /* ── ACHIEVEMENT POPUP ── */
+  #achievement-popup { position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(120px); background: var(--surface); border: 1px solid var(--green); border-radius: 16px; padding: 20px 32px; display: none; align-items: center; gap: 16px; z-index: 1000; animation: slideUp 0.4s ease forwards; box-shadow: 0 20px 60px rgba(74,222,128,0.2); min-width: 300px; }
+  #achievement-popup.show { display: flex; }
+  .ach-icon { font-size: 36px; }
+  .ach-text { display: flex; flex-direction: column; }
+  .ach-label { font-family: var(--mono); font-size: 9px; letter-spacing: 0.2em; color: var(--green); text-transform: uppercase; margin-bottom: 4px; }
+  .ach-name { font-family: var(--serif); font-size: 20px; }
+  .ach-desc { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  /* ── LEAFLET DARK OVERRIDES ── */
+  .leaflet-control-zoom a { background: var(--surface) !important; color: var(--green) !important; border-color: var(--border) !important; }
+  .leaflet-popup-content-wrapper { background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 10px; }
+  .leaflet-popup-tip { background: var(--surface); }
+  .leaflet-popup-content { font-family: var(--mono); font-size: 11px; margin: 8px 12px; }
 
   @media (max-width: 900px) {
     .planner-card { grid-template-columns: 1fr; }
@@ -628,16 +258,339 @@
     .features-grid { grid-template-columns: 1fr; }
     .compare-grid { grid-template-columns: repeat(3, 1fr); }
     nav { padding: 16px 24px; }
+    .nav-links { display: none; }
     .planner-section, .compare-section { padding: 60px 24px; }
     .features-section { padding: 60px 24px; }
+    #map-section { padding: 0 24px 60px; }
     .hero-actions { flex-direction: column; }
     .stats-bar { flex-direction: column; }
     .stat { border-right: none; border-bottom: 1px solid var(--border); }
   }
+
+  /* ── 3D ROUTE STACK ── */
+  #route-cards {
+    perspective: 1000px;
+    display: flex;
+    justify-content: center;
+    position: relative;
+    height: 440px;
+    margin-top: 20px;
+  }
+  .route-card-3d {
+    position: absolute;
+    width: 320px;
+    height: 400px;
+    background: rgba(10, 15, 13, 0.4);
+    backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 24px;
+    padding: 24px;
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+    transform-style: preserve-3d;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+    display: flex;
+    flex-direction: column;
+    opacity: 1;
+  }
+  
+  .route-card-3d[data-index="0"] { transform: translateX(-80px) rotateY(12deg) translateZ(-50px); z-index: 1; }
+  .route-card-3d[data-index="1"] { transform: translateX(0) rotateY(0deg) translateZ(0px); z-index: 3; }
+  .route-card-3d[data-index="2"] { transform: translateX(80px) rotateY(-12deg) translateZ(-50px); z-index: 2; }
+  
+  #route-cards:hover .route-card-3d { opacity: 0.4; }
+  #route-cards .route-card-3d:hover {
+    transform: translateX(0) translateY(-12px) rotateY(0deg) translateZ(20px) scale(1.05);
+    opacity: 1;
+    z-index: 10;
+    box-shadow: 0 30px 60px rgba(0,0,0,0.8), 0 0 30px var(--accent-color, rgba(255,255,255,0.1));
+    border-color: var(--accent-color, rgba(255,255,255,0.2));
+  }
+  
+  .route-card-3d.locked {
+    transform: translateX(0) translateY(0) rotateY(0deg) translateZ(50px) scale(1.05) !important;
+    opacity: 1 !important;
+    z-index: 20 !important;
+    box-shadow: 0 40px 80px rgba(0,0,0,0.9), 0 0 50px var(--accent-color, rgba(255,255,255,0.3)) !important;
+    border-color: var(--accent-color, rgba(255,255,255,0.5)) !important;
+  }
+  
+  .ring-container {
+    position: relative;
+    width: 140px;
+    height: 140px;
+    margin: 20px auto;
+  }
+  .ring-svg { transform: rotate(-90deg); width: 100%; height: 100%; }
+  .ring-bg { fill: none; stroke: rgba(255,255,255,0.05); stroke-width: 8; }
+  .ring-progress {
+    fill: none;
+    stroke: var(--accent-color);
+    stroke-width: 8;
+    stroke-linecap: round;
+    stroke-dasharray: 283;
+    stroke-dashoffset: 283;
+    transition: stroke-dashoffset 1.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .ring-value {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+  }
+  .ring-num { font-family: var(--mono); font-size: 28px; font-weight: 700; color: var(--text); line-height: 1; }
+  .ring-label { font-size: 10px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-top: 4px; }
+  
+  @keyframes pulseGlow {
+    from { box-shadow: 0 0 10px rgba(74,222,128,0.2); }
+    to { box-shadow: 0 0 25px rgba(74,222,128,0.6); }
+  }
+  
+  /* ── LIVE CARBON WIDGET ── */
+  #live-carbon-widget {
+    position: fixed;
+    bottom: 24px;
+    left: 24px;
+    width: 260px;
+    background: rgba(10, 15, 13, 0.6);
+    backdrop-filter: blur(24px);
+    border: 1px solid rgba(74,222,128,0.3);
+    border-radius: 20px;
+    padding: 20px;
+    z-index: 1000;
+    animation: pulseGlow 3s ease-in-out infinite alternate;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    transition: width 0.3s, height 0.3s;
+    overflow: hidden;
+  }
+  #live-carbon-widget.collapsed {
+    width: 64px;
+    height: 64px;
+    padding: 0;
+    border-radius: 32px;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+  }
+  #live-carbon-widget.collapsed .widget-full { display: none; }
+  #live-carbon-widget.collapsed .widget-icon { display: block; font-size: 24px; animation: heartbeat 1.5s infinite; }
+  @keyframes heartbeat { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+  
+  .widget-full { display: flex; flex-direction: column; gap: 16px; }
+  .widget-icon { display: none; }
+  .lcw-section { display: flex; flex-direction: column; gap: 4px; }
+  .lcw-label { font-family: var(--mono); font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; display:flex; align-items:center; gap:6px; }
+  .lcw-val-red { font-family: var(--mono); font-size: 20px; font-weight: 700; color: var(--red); }
+  .lcw-val-green { font-family: var(--mono); font-size: 22px; font-weight: 700; color: var(--green); }
+  .lcw-divider { width: 100%; height: 1px; background: rgba(255,255,255,0.05); }
+  /* ── 3D ROUTE STACK ── */
+  #route-cards {
+    perspective: 1000px;
+    display: flex;
+    justify-content: center;
+    position: relative;
+    height: 440px;
+    margin-top: 20px;
+  }
+  .route-card-3d {
+    position: absolute;
+    width: 320px;
+    height: 400px;
+    background: rgba(10, 15, 13, 0.4);
+    backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 24px;
+    padding: 24px;
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+    transform-style: preserve-3d;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+    display: flex;
+    flex-direction: column;
+    opacity: 1;
+  }
+  
+  .route-card-3d[data-index="0"] { transform: translateX(-80px) rotateY(12deg) translateZ(-50px); z-index: 1; }
+  .route-card-3d[data-index="1"] { transform: translateX(0) rotateY(0deg) translateZ(0px); z-index: 3; }
+  .route-card-3d[data-index="2"] { transform: translateX(80px) rotateY(-12deg) translateZ(-50px); z-index: 2; }
+  
+  #route-cards:hover .route-card-3d { opacity: 0.4; }
+  #route-cards .route-card-3d:hover {
+    transform: translateX(0) translateY(-12px) rotateY(0deg) translateZ(20px) scale(1.05);
+    opacity: 1;
+    z-index: 10;
+    box-shadow: 0 30px 60px rgba(0,0,0,0.8), 0 0 30px var(--accent-color, rgba(255,255,255,0.1));
+    border-color: var(--accent-color, rgba(255,255,255,0.2));
+  }
+  
+  .route-card-3d.locked {
+    transform: translateX(0) translateY(0) rotateY(0deg) translateZ(50px) scale(1.05) !important;
+    opacity: 1 !important;
+    z-index: 20 !important;
+    box-shadow: 0 40px 80px rgba(0,0,0,0.9), 0 0 50px var(--accent-color, rgba(255,255,255,0.3)) !important;
+    border-color: var(--accent-color, rgba(255,255,255,0.5)) !important;
+  }
+  
+  .ring-container {
+    position: relative;
+    width: 140px;
+    height: 140px;
+    margin: 20px auto;
+  }
+  .ring-svg { transform: rotate(-90deg); width: 100%; height: 100%; }
+  .ring-bg { fill: none; stroke: rgba(255,255,255,0.05); stroke-width: 8; }
+  .ring-progress {
+    fill: none;
+    stroke: var(--accent-color);
+    stroke-width: 8;
+    stroke-linecap: round;
+    stroke-dasharray: 283;
+    stroke-dashoffset: 283;
+    transition: stroke-dashoffset 1.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .ring-value {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+  }
+  .ring-num { font-family: var(--mono); font-size: 28px; font-weight: 700; color: var(--text); line-height: 1; }
+  .ring-label { font-size: 10px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-top: 4px; }
+  
+  @keyframes pulseGlow {
+    from { box-shadow: 0 0 10px rgba(74,222,128,0.2); }
+    to { box-shadow: 0 0 25px rgba(74,222,128,0.6); }
+  }
+  
+  /* ── LIVE CARBON WIDGET ── */
+  #live-carbon-widget {
+    position: fixed;
+    bottom: 24px;
+    left: 24px;
+    width: 260px;
+    background: rgba(10, 15, 13, 0.6);
+    backdrop-filter: blur(24px);
+    border: 1px solid rgba(74,222,128,0.3);
+    border-radius: 20px;
+    padding: 20px;
+    z-index: 1000;
+    animation: pulseGlow 3s ease-in-out infinite alternate;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    transition: width 0.3s, height 0.3s;
+    overflow: hidden;
+  }
+  #live-carbon-widget.collapsed {
+    width: 64px;
+    height: 64px;
+    padding: 0;
+    border-radius: 32px;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+  }
+  #live-carbon-widget.collapsed .widget-full { display: none; }
+  #live-carbon-widget.collapsed .widget-icon { display: block; font-size: 24px; animation: heartbeat 1.5s infinite; }
+  @keyframes heartbeat { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+  
+  .widget-full { display: flex; flex-direction: column; gap: 16px; }
+  .widget-icon { display: none; }
+  .lcw-section { display: flex; flex-direction: column; gap: 4px; }
+  .lcw-label { font-family: var(--mono); font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; display:flex; align-items:center; gap:6px; }
+  .lcw-val-red { font-family: var(--mono); font-size: 20px; font-weight: 700; color: var(--red); }
+  .lcw-val-green { font-family: var(--mono); font-size: 22px; font-weight: 700; color: var(--green); }
+  .lcw-divider { width: 100%; height: 1px; background: rgba(255,255,255,0.05); }
+
 </style>
 </head>
 <body>
 
+<!-- AUTH MODAL -->
+<div class="modal-overlay" id="auth-modal" onclick="handleModalOutsideClick(event)">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+
+    <div class="modal-tabs">
+      <button class="modal-tab active" id="tab-signin" onclick="switchTab('signin')">Sign In</button>
+      <button class="modal-tab" id="tab-register" onclick="switchTab('register')">Create Account</button>
+    </div>
+
+    <!-- Sign In Form -->
+    <form class="modal-form active" id="form-signin" onsubmit="doLogin(event)">
+      <div class="modal-field">
+        <label class="modal-label">Email</label>
+        <input class="modal-input" id="login-email" type="email" placeholder="you@example.com" required>
+      </div>
+      <div class="modal-field">
+        <label class="modal-label">Password</label>
+        <input class="modal-input" id="login-password" type="password" placeholder="••••••••" required>
+      </div>
+      <div class="modal-error" id="login-error"></div>
+      <button type="submit" class="modal-btn modal-btn-primary">Sign In</button>
+      <div class="modal-divider">or</div>
+      <button type="button" class="modal-btn modal-btn-google" onclick="alert('Google OAuth coming soon!')">
+        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#4285F4" d="M43.6 20.5H24v7h11.3C33.7 33 29.2 36 24 36a12 12 0 1 1 0-24c3.1 0 5.8 1.2 7.9 3.1l5.1-5.1A20 20 0 1 0 24 44c11 0 20-9 20-20 0-1.2-.1-2.4-.4-3.5z"/></svg>
+        Continue with Google
+      </button>
+      <div class="modal-link" onclick="alert('Password reset coming soon!')">Forgot password?</div>
+    </form>
+
+    <!-- Register Form -->
+    <form class="modal-form" id="form-register" onsubmit="doRegister(event)">
+      <div class="modal-field">
+        <label class="modal-label">Full Name</label>
+        <input class="modal-input" id="reg-name" type="text" placeholder="Arjun Sharma" required>
+      </div>
+      <div class="modal-field">
+        <label class="modal-label">Email</label>
+        <input class="modal-input" id="reg-email" type="email" placeholder="you@example.com" required>
+      </div>
+      <div class="modal-field">
+        <label class="modal-label">Password</label>
+        <input class="modal-input" id="reg-password" type="password" placeholder="Min. 8 characters" required>
+      </div>
+      <div class="modal-field">
+        <label class="modal-label">Confirm Password</label>
+        <input class="modal-input" id="reg-confirm" type="password" placeholder="Repeat password" required>
+      </div>
+      <div class="modal-error" id="reg-error"></div>
+      <button type="submit" class="modal-btn modal-btn-primary" style="background:var(--green);">🌱 Create Account</button>
+    </form>
+  </div>
+</div>
+
+<!-- ACHIEVEMENT POPUP -->
+<div id="achievement-popup">
+  <div class="ach-icon" id="ach-icon">🌱</div>
+  <div class="ach-text">
+    <div class="ach-label">Achievement Unlocked</div>
+    <div class="ach-name" id="ach-name">First Step</div>
+    <div class="ach-desc" id="ach-desc">Completed your first trip!</div>
+  </div>
+</div>
+
+<!-- LIVE CARBON WIDGET -->
+<div id="live-carbon-widget" class="collapsed" onclick="this.classList.remove('collapsed')">
+  <div class="widget-icon">🌍</div>
+  <div class="widget-full">
+    <div class="lcw-section">
+      <div class="lcw-label"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--red);box-shadow:0 0 8px var(--red);"></span> INDIA EMITS (LIVE)</div>
+      <div class="lcw-val-red" id="lcw-india-emits">0 kg CO₂</div>
+    </div>
+    <div class="lcw-divider"></div>
+    <div class="lcw-section">
+      <div class="lcw-label"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);"></span> YOU SAVED</div>
+      <div class="lcw-val-green" id="lcw-you-saved">0.00 kg</div>
+    </div>
+  </div>
+</div>
+
+<!-- NAV -->
 <nav>
   <div class="logo">SROS</div>
   <div class="nav-links">
@@ -646,37 +599,26 @@
     <a href="#compare">Compare</a>
     <a href="/dashboard">Dashboard</a>
   </div>
-  <a href="/dashboard" class="nav-cta">Open Dashboard</a>
+  <button class="nav-cta" id="nav-auth-btn" onclick="handleNavCta()">
+    <span class="nav-dot" id="nav-dot"></span>
+    <span id="nav-btn-text">Sign In</span>
+  </button>
 </nav>
 
 <!-- HERO -->
 <section class="hero">
   <div class="hero-eyebrow">Sustainable Route Optimization System</div>
   <h1>Route smarter.<br><em>Emit less.</em></h1>
-  <p class="hero-sub">
-    AI-powered routing that balances speed, cost, and carbon footprint — helping you make every journey greener.
-  </p>
+  <p class="hero-sub">AI-powered routing that balances speed, cost, and carbon footprint — helping you make every journey greener.</p>
   <div class="hero-actions">
     <a href="#planner" class="btn-primary">Plan a Route</a>
     <a href="/dashboard" class="btn-ghost">View Dashboard</a>
   </div>
   <div class="stats-bar">
-    <div class="stat">
-      <div class="stat-num" id="counter-routes">0</div>
-      <div class="stat-label">Routes Analyzed</div>
-    </div>
-    <div class="stat">
-      <div class="stat-num" id="counter-co2">0</div>
-      <div class="stat-label">kg CO₂ Saved</div>
-    </div>
-    <div class="stat">
-      <div class="stat-num" id="counter-trees">0</div>
-      <div class="stat-label">Trees Equivalent</div>
-    </div>
-    <div class="stat">
-      <div class="stat-num" id="counter-cities">0</div>
-      <div class="stat-label">Cities Supported</div>
-    </div>
+    <div class="stat"><div class="stat-num" id="counter-routes">0</div><div class="stat-label">Routes Analyzed</div></div>
+    <div class="stat"><div class="stat-num" id="counter-co2">0</div><div class="stat-label">kg CO₂ Saved</div></div>
+    <div class="stat"><div class="stat-num" id="counter-trees">0</div><div class="stat-label">Trees Equivalent</div></div>
+    <div class="stat"><div class="stat-num" id="counter-cities">0</div><div class="stat-label">Cities Supported</div></div>
   </div>
 </section>
 
@@ -689,19 +631,17 @@
     <div class="planner-form-side">
       <div>
         <div class="planner-title">Plan a journey</div>
-        <div style="font-size:13px;color:var(--muted);margin-top:6px;">Enter cities from our supported list — Delhi, Mumbai, Bangalore, Pune, Hyderabad, Chennai, Kolkata, Jaipur, Noida, and more.</div>
+        <div style="font-size:13px;color:var(--muted);margin-top:6px;">Enter any Indian city or address — powered by real geocoding.</div>
       </div>
 
       <div class="field-group">
         <div class="field-label">Origin</div>
         <input class="field-input" id="origin" type="text" placeholder="e.g. Delhi" list="cities-list">
       </div>
-
       <div class="field-group">
         <div class="field-label">Destination</div>
         <input class="field-input" id="destination" type="text" placeholder="e.g. Agra" list="cities-list">
       </div>
-
       <datalist id="cities-list">
         <option value="Delhi"><option value="Mumbai"><option value="Bangalore">
         <option value="Hyderabad"><option value="Pune"><option value="Chennai">
@@ -713,34 +653,13 @@
       <div class="field-group">
         <div class="field-label">Vehicle Type</div>
         <div class="vehicle-grid" id="vehicle-grid">
-          <button class="vehicle-btn active" data-vehicle="car_petrol">
-            <span class="vehicle-icon">🚗</span>
-            <span class="vehicle-name">Petrol</span>
-          </button>
-          <button class="vehicle-btn" data-vehicle="car_diesel">
-            <span class="vehicle-icon">🚙</span>
-            <span class="vehicle-name">Diesel</span>
-          </button>
-          <button class="vehicle-btn" data-vehicle="car_electric">
-            <span class="vehicle-icon">⚡</span>
-            <span class="vehicle-name">Electric</span>
-          </button>
-          <button class="vehicle-btn" data-vehicle="car_cng">
-            <span class="vehicle-icon">🚘</span>
-            <span class="vehicle-name">CNG</span>
-          </button>
-          <button class="vehicle-btn" data-vehicle="bike_petrol">
-            <span class="vehicle-icon">🏍️</span>
-            <span class="vehicle-name">Bike</span>
-          </button>
-          <button class="vehicle-btn" data-vehicle="bicycle">
-            <span class="vehicle-icon">🚲</span>
-            <span class="vehicle-name">Cycle</span>
-          </button>
-          <button class="vehicle-btn" data-vehicle="public_bus">
-            <span class="vehicle-icon">🚌</span>
-            <span class="vehicle-name">Bus</span>
-          </button>
+          <button class="vehicle-btn active" data-vehicle="car_petrol"><span class="vehicle-icon">🚗</span><span class="vehicle-name">Petrol</span></button>
+          <button class="vehicle-btn" data-vehicle="car_diesel"><span class="vehicle-icon">🚙</span><span class="vehicle-name">Diesel</span></button>
+          <button class="vehicle-btn" data-vehicle="car_electric"><span class="vehicle-icon">⚡</span><span class="vehicle-name">Electric</span></button>
+          <button class="vehicle-btn" data-vehicle="car_cng"><span class="vehicle-icon">🚘</span><span class="vehicle-name">CNG</span></button>
+          <button class="vehicle-btn" data-vehicle="bike_petrol"><span class="vehicle-icon">🏍️</span><span class="vehicle-name">Bike</span></button>
+          <button class="vehicle-btn" data-vehicle="bicycle"><span class="vehicle-icon">🚲</span><span class="vehicle-name">Cycle</span></button>
+          <button class="vehicle-btn" data-vehicle="public_bus"><span class="vehicle-icon">🚌</span><span class="vehicle-name">Bus</span></button>
         </div>
       </div>
 
@@ -748,19 +667,55 @@
         <div class="spinner"></div>
         <span class="btn-text">⚡ Calculate Green Routes</span>
       </button>
+
+      <!-- Sign-in banner for guests -->
+      <div class="signin-banner" id="signin-banner" onclick="openModal()">
+        🌱 <span>Sign in</span> to save your routes and track your carbon savings.
+      </div>
     </div>
 
     <div class="planner-results-side">
       <div class="results-title" id="results-title">Route Options</div>
+      
+      <div id="weather-box" style="display:none; margin-top:16px; padding:16px 20px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:12px; align-items:center; gap:12px;">
+        <span style="font-size:24px;">🌤️</span>
+        <div>
+          <div style="font-family:var(--mono);font-size:10px;color:var(--muted);text-transform:uppercase;">Destination Weather</div>
+          <div id="weather-text" style="font-size:14px; font-weight:500;">--°C</div>
+        </div>
+      </div>
+
       <div class="results-placeholder" id="results-placeholder">
         <div class="placeholder-icon">🗺️</div>
-        <div style="font-size:14px;">Enter origin & destination<br>to see route options</div>
+        <div style="font-size:14px;">Enter origin &amp; destination<br>to see route options</div>
       </div>
       <div id="route-cards"></div>
+      
+      <div id="ai-insight" style="display:none; margin-top:20px; padding:20px; background:rgba(30,50,40,0.6); backdrop-filter: blur(10px); border:1px solid rgba(74,222,128,0.3); border-radius:16px; box-shadow: 0 10px 20px rgba(0,0,0,0.3);">
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom:10px;">
+          <div style="width:36px; height:36px; border-radius:18px; background:linear-gradient(135deg, #4ade80, #3b82f6); display:flex; align-items:center; justify-content:center; font-size:18px; box-shadow:0 0 15px rgba(74,222,128,0.4);">
+            👨🏻‍💼
+          </div>
+          <div style="font-family:var(--sans); font-size:13px; font-weight:600; color:var(--text); letter-spacing:0.5px;">EcoCopilot Mia</div>
+        </div>
+        <div id="ai-text" style="font-size:15px; line-height:1.6; color:#d1dfd4; font-weight: 300;">Analyzing your journey...</div>
+      </div>
+
       <div id="impact-box" style="display:none; margin-top:8px; padding:16px 20px; background:var(--green-glow); border:1px solid rgba(74,222,128,0.3); border-radius:12px;">
         <div style="font-family:var(--mono);font-size:10px;letter-spacing:0.1em;color:var(--green);text-transform:uppercase;margin-bottom:8px;">Eco Impact (Greenest vs Fastest)</div>
         <div id="impact-text" style="font-size:14px;line-height:1.6;color:var(--text);"></div>
       </div>
+    </div>
+  </div>
+</section>
+
+<!-- MAP SECTION -->
+<section id="map-section">
+  <div class="section-label">Live Route Map</div>
+  <div id="map-container">
+    <div id="map"></div>
+    <div id="map-controls">
+      <button class="map-ctrl-btn" onclick="clearMap()">✕ Clear Map</button>
     </div>
   </div>
 </section>
@@ -771,234 +726,569 @@
     <div class="section-label">What it does</div>
     <div class="section-title">Built for impact</div>
     <div class="features-grid">
-      <div class="feature-card">
-        <div class="feature-icon">🧭</div>
-        <div class="feature-name">Smart Route Engine</div>
-        <div class="feature-desc">Graph-based routing using Haversine distance + road network heuristics. Generates fastest, balanced, and greenest route variants simultaneously.</div>
-        <span class="feature-tag">NetworkX · OSMnx</span>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">📊</div>
-        <div class="feature-name">CO₂ Calculator</div>
-        <div class="feature-desc">Per-km emission factors from ICCT & EEA data for 7 vehicle types. Computes real savings against a petrol baseline and tree absorption equivalents.</div>
-        <span class="feature-tag">Science-backed</span>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">⚖️</div>
-        <div class="feature-name">Route Comparison</div>
-        <div class="feature-desc">Side-by-side comparison of time, cost, and emissions across all 3 route types — helping users make informed, conscious choices.</div>
-        <span class="feature-tag">3-way Tradeoff</span>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">🌱</div>
-        <div class="feature-name">Green Score</div>
-        <div class="feature-desc">Every route gets a 0–100 sustainability score computed from emission intensity relative to baseline. Visual progress bar for instant understanding.</div>
-        <span class="feature-tag">0–100 Scale</span>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">🏆</div>
-        <div class="feature-name">Eco Leaderboard</div>
-        <div class="feature-desc">Gamified sustainability tracking. Users accumulate CO₂ savings across trips and compete on a live leaderboard — driving behavioral change.</div>
-        <span class="feature-tag">Gamification</span>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">📈</div>
-        <div class="feature-name">Analytics Dashboard</div>
-        <div class="feature-desc">Live charts showing emission breakdowns per vehicle type, cumulative savings over time, and city-level routing statistics.</div>
-        <span class="feature-tag">Plotly · Flask</span>
-      </div>
+      <div class="feature-card"><div class="feature-icon">🧭</div><div class="feature-name">Smart Route Engine</div><div class="feature-desc">Real routing via OpenRouteService with Redis + SQLite caching. Generates fastest, balanced, and greenest variants with actual road distances.</div><span class="feature-tag">ORS · Geocoding</span></div>
+      <div class="feature-card"><div class="feature-icon">📊</div><div class="feature-name">CO₂ Calculator</div><div class="feature-desc">Per-km emission factors from ICCT & EEA data for 7 vehicle types. Computes real savings against a petrol baseline and tree absorption equivalents.</div><span class="feature-tag">Science-backed</span></div>
+      <div class="feature-card"><div class="feature-icon">⚖️</div><div class="feature-name">Route Comparison</div><div class="feature-desc">Side-by-side comparison of time, cost, and emissions across all 3 route types — helping users make informed, conscious choices.</div><span class="feature-tag">3-way Tradeoff</span></div>
+      <div class="feature-card"><div class="feature-icon">🌱</div><div class="feature-name">Green Score</div><div class="feature-desc">Every route gets a 0–100 sustainability score computed from emission intensity relative to baseline. Visual progress bar for instant understanding.</div><span class="feature-tag">0–100 Scale</span></div>
+      <div class="feature-card"><div class="feature-icon">🏆</div><div class="feature-name">Eco Leaderboard</div><div class="feature-desc">Gamified sustainability tracking. Users accumulate CO₂ savings across trips and compete on a live leaderboard — driving behavioral change.</div><span class="feature-tag">Gamification</span></div>
+      <div class="feature-card"><div class="feature-icon">🎖️</div><div class="feature-name">Achievements</div><div class="feature-desc">Earn badges for milestones: First Trip, Carbon Saver, Eco Champion, Perfect Week, and more — making sustainability addictive.</div><span class="feature-tag">7 Badges</span></div>
     </div>
   </div>
 </section>
 
-<!-- EMISSIONS COMPARE -->
+<!-- COMPARE -->
 <section class="compare-section" id="compare">
   <div class="section-label">Vehicle Emissions</div>
   <div class="section-title">How each vehicle compares</div>
   <p style="color:var(--muted);font-size:14px;max-width:480px;margin-bottom:8px;">CO₂ emissions per 100 km. Figures sourced from ICCT and EEA average fleet data.</p>
-
-  <div class="compare-grid" id="compare-grid">
-    <!-- Rendered by JS -->
-  </div>
+  <div class="compare-grid" id="compare-grid"></div>
 </section>
 
 <footer>
-  <div class="logo">SROS — v1.0</div>
+  <div class="logo">SROS — v2.0</div>
   <div>Sustainable Route Optimization System · Mini Project</div>
-  <div style="font-family:var(--mono);font-size:11px;">Built with Flask · Python · NetworkX</div>
+  <div style="font-family:var(--mono);font-size:11px;">Built with Flask · OpenRouteService · PostgreSQL</div>
 </footer>
 
 <div class="toast" id="toast"></div>
 
 <script>
-  // ── Vehicle selection ──
-  let selectedVehicle = 'car_petrol';
-  document.querySelectorAll('.vehicle-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.vehicle-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      selectedVehicle = btn.dataset.vehicle;
-    });
-  });
+// ══════════════════════════════════════════════════════════════════
+// AUTH STATE
+// ══════════════════════════════════════════════════════════════════
+let currentUser = null;
+const getToken = () => localStorage.getItem('token');
 
-  // ── Counter animation ──
-  function animateCounter(el, target, suffix = '') {
-    let start = 0;
-    const duration = 1800;
-    const step = target / (duration / 16);
-    const timer = setInterval(() => {
-      start = Math.min(start + step, target);
-      el.textContent = Math.floor(start).toLocaleString() + suffix;
-      if (start >= target) clearInterval(timer);
-    }, 16);
+function authHeaders() {
+  const h = { 'Content-Type': 'application/json' };
+  if (getToken()) h['Authorization'] = `Bearer ${getToken()}`;
+  return h;
+}
+
+async function checkAuth() {
+  const token = getToken();
+  if (!token) { showGuestUI(); return; }
+  try {
+    const res  = await fetch('/auth/me', { headers: authHeaders() });
+    const data = await res.json();
+    if (data.success) {
+      currentUser = data.data;
+      showLoggedInUI(currentUser);
+    } else {
+      localStorage.removeItem('token');
+      showGuestUI();
+    }
+  } catch (_) {
+    showGuestUI();
   }
-  window.addEventListener('load', () => {
-    setTimeout(() => {
-      animateCounter(document.getElementById('counter-routes'), 4823);
-      animateCounter(document.getElementById('counter-co2'),   12340);
-      animateCounter(document.getElementById('counter-trees'), 587);
-      animateCounter(document.getElementById('counter-cities'), 17);
-    }, 900);
+}
+
+function showLoggedInUI(user) {
+  const firstName = user.name.split(' ')[0];
+  document.getElementById('nav-btn-text').textContent = firstName;
+  document.getElementById('nav-dot').classList.add('visible');
+  document.getElementById('signin-banner').style.display = 'none';
+}
+
+function showGuestUI() {
+  document.getElementById('nav-btn-text').textContent = 'Sign In';
+  document.getElementById('nav-dot').classList.remove('visible');
+}
+
+function handleNavCta() {
+  if (currentUser) {
+    window.location.href = '/dashboard';
+  } else {
+    openModal();
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// MODAL
+// ══════════════════════════════════════════════════════════════════
+function openModal(tab = 'signin') {
+  document.getElementById('auth-modal').classList.add('open');
+  switchTab(tab);
+}
+function closeModal() {
+  document.getElementById('auth-modal').classList.remove('open');
+}
+function handleModalOutsideClick(e) {
+  if (e.target === document.getElementById('auth-modal')) closeModal();
+}
+function switchTab(tab) {
+  document.getElementById('tab-signin').classList.toggle('active',   tab === 'signin');
+  document.getElementById('tab-register').classList.toggle('active', tab === 'register');
+  document.getElementById('form-signin').classList.toggle('active',   tab === 'signin');
+  document.getElementById('form-register').classList.toggle('active', tab === 'register');
+  document.getElementById('login-error').textContent = '';
+  document.getElementById('reg-error').textContent   = '';
+}
+
+// Login
+async function doLogin(e) {
+  e.preventDefault();
+  const email    = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const errEl    = document.getElementById('login-error');
+  errEl.textContent = '';
+  try {
+    const res  = await fetch('/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
+    const data = await res.json();
+    if (!data.success) { errEl.textContent = data.error || 'Login failed'; return; }
+    localStorage.setItem('token', data.data.access_token);
+    currentUser = data.data.user;
+    closeModal();
+    showLoggedInUI(currentUser);
+    showToast('✓ Welcome back, ' + currentUser.name.split(' ')[0] + '!');
+  } catch (_) {
+    errEl.textContent = 'Network error. Please try again.';
+  }
+}
+
+// Register
+async function doRegister(e) {
+  e.preventDefault();
+  const name     = document.getElementById('reg-name').value.trim();
+  const email    = document.getElementById('reg-email').value.trim();
+  const password = document.getElementById('reg-password').value;
+  const confirm  = document.getElementById('reg-confirm').value;
+  const errEl    = document.getElementById('reg-error');
+  errEl.textContent = '';
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { errEl.textContent = 'Enter a valid email address.'; return; }
+  if (password.length < 8)                         { errEl.textContent = 'Password must be at least 8 characters.'; return; }
+  if (password !== confirm)                         { errEl.textContent = 'Passwords do not match.'; return; }
+
+  try {
+    const res  = await fetch('/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email, password }) });
+    const data = await res.json();
+    if (!data.success) { errEl.textContent = data.error || 'Registration failed'; return; }
+    localStorage.setItem('token', data.data.access_token);
+    currentUser = data.data.user;
+    closeModal();
+    showLoggedInUI(currentUser);
+    showToast('Welcome to SROS 🌱');
+  } catch (_) {
+    errEl.textContent = 'Network error. Please try again.';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// ROUTE OPTIMIZER
+// ══════════════════════════════════════════════════════════════════
+let selectedVehicle = 'car_petrol';
+document.querySelectorAll('.vehicle-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.vehicle-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedVehicle = btn.dataset.vehicle;
   });
+});
 
-  // ── Route optimization call ──
-  async function optimizeRoutes() {
-    const origin = document.getElementById('origin').value.trim();
-    const dest   = document.getElementById('destination').value.trim();
+async function optimizeRoutes() {
+  const origin = document.getElementById('origin').value.trim();
+  const dest   = document.getElementById('destination').value.trim();
+  if (!origin || !dest) { showToast('Please enter both origin and destination'); return; }
 
-    if (!origin || !dest) { showToast('Please enter both origin and destination'); return; }
+  const btn = document.getElementById('calc-btn');
+  btn.classList.add('loading');
+  btn.disabled = true;
 
-    const btn = document.getElementById('calc-btn');
-    btn.classList.add('loading');
-    btn.disabled = true;
+  try {
+    const res = await fetch('/api/optimize', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ origin, destination: dest, vehicle: selectedVehicle, priority: 'balanced' }),
+    });
+    const data = await res.json();
 
-    try {
-      const res = await fetch('/api/optimize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ origin, destination: dest, vehicle: selectedVehicle, priority: 'balanced' })
-      });
-
-      const data = await res.json();
-      if (!data.success) throw new Error(data.error || 'Server error');
-      renderRoutes(data.routes);
-      showToast('✓ Routes calculated successfully');
-    } catch (e) {
-      showToast('Error: ' + e.message);
-    } finally {
+    if (res.status === 401) {
+      // Guest — still run but show banner
+      showToast('Sign in to save your routes!');
+      document.getElementById('signin-banner').style.display = 'block';
+      // Try again without auth for public fallback
       btn.classList.remove('loading');
       btn.disabled = false;
+      return;
     }
+
+    if (!data.success) {
+      showToast('Error: ' + (data.error || 'Route calculation failed'));
+      return;
+    }
+
+    renderRoutes(data.data.routes);
+    drawRoutesOnMap(data.data.routes);
+    showToast('✓ Routes calculated');
+
+    // Fetch Weather first so we can feed it to AI
+    const dest_coords = data.data.routes[0].dest_coords;
+    let weatherDesc = "Clear";
+    let tempVal = "--";
+    
+    document.getElementById('ai-insight').style.display = 'block';
+    document.getElementById('ai-text').innerHTML = '<span class="spinner" style="display:inline-block; border-top-color:var(--green); width:12px; height:12px; margin-right:8px; vertical-align:middle;"></span> Reading weather and crunching numbers...';
+    
+    fetch('/api/weather', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ lat: dest_coords.lat, lng: dest_coords.lng })
+    }).then(r => r.json()).then(w => {
+      if (w.success) {
+        document.getElementById('weather-box').style.display = 'flex';
+        document.getElementById('weather-text').innerHTML = w.data.temperature + '°C, ' + w.data.description;
+        weatherDesc = w.data.description;
+        tempVal = w.data.temperature;
+      }
+    }).catch(e => console.log('Weather error:', e)).finally(() => {
+        // Now fetch AI Insight with weather context
+        fetch('/api/ai_insight', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ routes: data.data.routes, weather: weatherDesc, temp: tempVal })
+        }).then(r => r.json()).then(ai => {
+          if (ai.success) document.getElementById('ai-text').innerHTML = ai.data.insight;
+          else document.getElementById('ai-insight').style.display = 'none';
+        }).catch(e => {
+          document.getElementById('ai-insight').style.display = 'none';
+        });
+    });
+
+    // Achievement popups
+    const newAch = data.data.new_achievements || [];
+    if (newAch.length > 0) {
+      showAchievements(newAch);
+    }
+
+    // Banner for guests
+    if (!currentUser) {
+      document.getElementById('signin-banner').style.display = 'block';
+    }
+
+  } catch (e) {
+    showToast('Error: ' + e.message);
+  } finally {
+    btn.classList.remove('loading');
+    btn.disabled = false;
   }
+}
 
-  function renderRoutes(routes) {
-    document.getElementById('results-placeholder').style.display = 'none';
-    document.getElementById('results-title').classList.add('show');
+function renderRoutes(routes) {
+  document.getElementById('results-placeholder').style.display = 'none';
+  document.getElementById('results-title').classList.add('show');
 
-    const container = document.getElementById('route-cards');
-    container.innerHTML = '';
+  // Expand the live widget
+  document.getElementById('live-carbon-widget').classList.remove('collapsed');
 
-    routes.forEach((route, i) => {
-      const em = route.emissions;
-      const card = document.createElement('div');
-      card.className = 'route-card show' + (i === 1 ? ' active' : '');
+  const container = document.getElementById('route-cards');
+  container.innerHTML = '';
+  
+  // Enforce perspective container
+  container.style.display = 'flex';
+  
+  routes.forEach((route, i) => {
+    const em = route.emissions;
+    const card = document.createElement('div');
+    card.className = 'route-card-3d';
+    card.dataset.index = i;
+    card.dataset.routeType = route.type;
 
-      const colors = { fastest: '#ef4444', balanced: '#f59e0b', greenest: '#4ade80' };
-      const color  = colors[route.type] || '#4ade80';
+    const colors = { fastest: '#ef4444', balanced: '#f59e0b', greenest: '#4ade80' };
+    const color  = colors[route.type] || '#4ade80';
+    card.style.setProperty('--accent-color', color);
 
-      card.innerHTML = `
-        <div class="route-card-header">
-          <div style="font-family:var(--sans);font-size:15px;font-weight:500;">${route.label}</div>
-          <div class="route-type-badge" style="background:${color}20;color:${color};">${route.type}</div>
+    // Calculate ring ratio (assuming max around 50kg for visual)
+    const maxCo2 = Math.max(...routes.map(r => r.emissions.co2_kg));
+    const ratio = em.co2_kg === 0 ? 0 : em.co2_kg / (maxCo2 || 1);
+    const dashoffset = 283 - (283 * Math.max(0.05, ratio)); // 283 is circle circumference
+
+    card.innerHTML = `
+      <div class="route-card-header" style="justify-content:center; text-align:center;">
+        <div class="route-type-badge" style="background:${color}20;color:${color};font-size:12px;padding:6px 16px;">${route.type} Route</div>
+      </div>
+      
+      <div class="ring-container">
+        <svg class="ring-svg" viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="45" class="ring-bg"></circle>
+          <circle cx="50" cy="50" r="45" class="ring-progress" id="ring-${i}"></circle>
+        </svg>
+        <div class="ring-value">
+          <div class="ring-num">${em.co2_kg.toFixed(1)}</div>
+          <div class="ring-label">KG CO₂</div>
         </div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">${route.description}</div>
-        <div class="route-meta">
-          <div class="route-metric">
-            <div class="route-metric-val" style="color:${color};">${route.distance_km} km</div>
-            <div class="route-metric-key">Distance</div>
-          </div>
-          <div class="route-metric">
-            <div class="route-metric-val">${route.time_min} min</div>
-            <div class="route-metric-key">Est. Time</div>
-          </div>
-          <div class="route-metric">
-            <div class="route-metric-val" style="color:${em.co2_kg === 0 ? '#4ade80' : 'inherit'}">${em.co2_kg} kg</div>
-            <div class="route-metric-key">CO₂</div>
-          </div>
+      </div>
+      
+      <div class="route-meta" style="grid-template-columns: 1fr 1fr; margin-top:20px;">
+        <div class="route-metric">
+          <div class="route-metric-val" style="color:var(--text);font-size:20px;">${route.distance_km} <span style="font-size:12px;color:var(--muted);">km</span></div>
+          <div class="route-metric-key">Distance</div>
         </div>
-        <div class="green-score-bar">
-          <div class="green-score-fill" style="width:${em.green_score}%;background:${color};"></div>
+        <div class="route-metric">
+          <div class="route-metric-val" style="color:var(--text);font-size:20px;">${route.time_min} <span style="font-size:12px;color:var(--muted);">min</span></div>
+          <div class="route-metric-key">Est. Time</div>
         </div>
-        <div style="display:flex;justify-content:space-between;margin-top:6px;">
+      </div>
+      
+      <div style="margin-top:auto;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
           <span style="font-family:var(--mono);font-size:10px;color:var(--muted);">Green Score</span>
           <span style="font-family:var(--mono);font-size:10px;color:${color};">${em.green_score}/100</span>
         </div>
-        <div style="margin-top:10px;font-family:var(--mono);font-size:11px;color:var(--muted);">
-          ₹${em.fuel_cost_inr} fuel cost · ${em.co2_saved_kg} kg CO₂ saved vs petrol
-        </div>
-      `;
-
-      card.addEventListener('click', () => {
-        document.querySelectorAll('.route-card').forEach(c => c.classList.remove('active'));
-        card.classList.add('active');
-      });
-
-      container.appendChild(card);
-    });
-
-    // Impact box
-    const fastest = routes[0];
-    const greenest = routes[routes.length - 1];
-    const savedKg  = (greenest.emissions.co2_saved_kg - fastest.emissions.co2_saved_kg).toFixed(2);
-    const trees    = greenest.emissions.trees_equivalent;
-    const box      = document.getElementById('impact-box');
-    const txt      = document.getElementById('impact-text');
-    box.style.display = 'block';
-    txt.innerHTML = `Choosing the <strong style="color:var(--green)">Greenest Route</strong> over Fastest saves <strong>${Math.abs(savedKg)} kg CO₂</strong> on this trip — equivalent to <strong>${trees} trees</strong> absorbing carbon for a day.`;
-  }
-
-  // ── Emissions bar chart ──
-  const vehicles = [
-    { name: 'Petrol Car',  icon: '🚗', co2: 171, color: '#ef4444' },
-    { name: 'Diesel Car',  icon: '🚙', co2: 145, color: '#f97316' },
-    { name: 'CNG Car',     icon: '🚘', co2: 96,  color: '#eab308' },
-    { name: 'Bike',        icon: '🏍️', co2: 83,  color: '#a855f7' },
-    { name: 'Public Bus',  icon: '🚌', co2: 14,  color: '#3b82f6' },
-    { name: 'Electric',    icon: '⚡', co2: 0,   color: '#22c55e' },
-    { name: 'Bicycle',     icon: '🚲', co2: 0,   color: '#14b8a6' },
-  ];
-
-  const maxCo2   = Math.max(...vehicles.map(v => v.co2));
-  const maxHeight = 160;
-  const grid = document.getElementById('compare-grid');
-
-  vehicles.forEach(v => {
-    const barH = v.co2 === 0 ? 8 : Math.max(8, (v.co2 / maxCo2) * maxHeight);
-    const el = document.createElement('div');
-    el.className = 'compare-bar-wrap';
-    el.innerHTML = `
-      <span class="compare-bar-label">${v.icon}</span>
-      <div class="compare-bar" style="height:${barH}px;background:${v.color}20;border:1px solid ${v.color}50;border-bottom:2px solid ${v.color};"></div>
-      <div class="compare-bar-val">${v.co2 === 0 ? '0 g' : v.co2+'g'}</div>
-      <div class="compare-bar-name">${v.name}</div>
+        <div class="green-score-bar"><div class="green-score-fill" style="width:${em.green_score}%;background:${color};"></div></div>
+      </div>
     `;
-    grid.appendChild(el);
+
+    card.addEventListener('click', () => {
+      document.querySelectorAll('.route-card-3d').forEach(c => {
+        c.classList.remove('locked');
+        c.style.opacity = '0.4';
+      });
+      card.classList.add('locked');
+      highlightRoute(route.type);
+    });
+
+    container.appendChild(card);
+    
+    // Trigger SVG animation after a tiny delay for CSS transition to catch
+    setTimeout(() => {
+        document.getElementById(`ring-${i}`).style.strokeDashoffset = dashoffset;
+    }, 150 + (i * 120));
+  });
+  
+  // Calculate best stats for the live widget
+  const fastest = routes[0];
+  const greenest = routes[routes.length - 1];
+  const savedKg = Math.abs(greenest.emissions.co2_saved_kg - fastest.emissions.co2_saved_kg).toFixed(2);
+  
+  // Animate global widget savings stat
+  document.getElementById('lcw-you-saved').textContent = savedKg + ' kg';
+  
+  const trees = greenest.emissions.trees_equivalent;
+  const box = document.getElementById('impact-box');
+  box.style.display = 'block';
+  document.getElementById('impact-text').innerHTML =
+    `Choosing the <strong style="color:var(--green)">Greenest Route</strong> over Fastest saves <strong>${savedKg} kg CO₂</strong> — equivalent to <strong>${trees} trees</strong> absorbing carbon for a day.`;
+}
+
+// ══════════════════════════════════════════════════════════════════
+// MAP (Leaflet + CartoDB Dark Matter)
+// ══════════════════════════════════════════════════════════════════
+const map = L.map('map', { zoomControl: true, scrollWheelZoom: true }).setView([20.5937, 78.9629], 5);
+
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  attribution: '© OpenStreetMap © CartoDB',
+  subdomains: 'abcd',
+  maxZoom: 19,
+}).addTo(map);
+
+let routeLayers     = {};
+let markerLayers    = [];
+let popupLayers     = [];
+
+const ROUTE_STYLES = {
+  fastest:  { color: '#ef4444', weight: 3, dashArray: '8,6', opacity: 0.7 },
+  balanced: { color: '#f59e0b', weight: 4, dashArray: null,  opacity: 0.7 },
+  greenest: { color: '#4ade80', weight: 5, dashArray: null,  opacity: 0.7 },
+};
+
+function makeCircleMarker(latlng, label) {
+  return L.divIcon({
+    html: `<div style="width:28px;height:28px;border-radius:50%;background:#4ade80;border:2px solid #0a0f0d;display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace;font-size:11px;font-weight:700;color:#0a0f0d;">${label}</div>`,
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
+    className: '',
+  });
+}
+
+function drawRoutesOnMap(routes) {
+  clearMap(false);
+
+  const allCoords = [];
+  const origin    = routes[0].origin_coords;
+  const dest      = routes[0].dest_coords;
+
+  // Origin + Destination markers
+  const mA = L.marker([origin.lat, origin.lng], { icon: makeCircleMarker([origin.lat, origin.lng], 'A') }).addTo(map);
+  const mB = L.marker([dest.lat,   dest.lng],   { icon: makeCircleMarker([dest.lat, dest.lng],   'B') }).addTo(map);
+  markerLayers.push(mA, mB);
+
+  routes.forEach(route => {
+    const wpts  = route.waypoints || [];
+    if (wpts.length < 2) return;
+
+    const latlngs = wpts.map(p => [p.lat, p.lng]);
+    latlngs.forEach(ll => allCoords.push(ll));
+
+    const style = ROUTE_STYLES[route.type] || ROUTE_STYLES.balanced;
+    const opts  = { color: style.color, weight: style.weight, opacity: style.opacity };
+    if (style.dashArray) opts.dashArray = style.dashArray;
+
+    const polyline = L.polyline(latlngs, opts).addTo(map);
+    routeLayers[route.type] = polyline;
+
+    // Midpoint popup
+    const midIdx   = Math.floor(wpts.length / 2);
+    const midPt    = wpts[midIdx];
+    const em       = route.emissions;
+    const popup    = L.popup({ closeButton: false, offset: [0, -4] })
+      .setLatLng([midPt.lat, midPt.lng])
+      .setContent(`<b>${route.label}</b><br>${route.distance_km} km · ${em.co2_kg} kg CO₂`);
+    popupLayers.push(popup);
   });
 
-  // ── Toast ──
-  function showToast(msg) {
-    const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), 3000);
+  // Open balanced popup by default
+  if (routeLayers['balanced'] && popupLayers.length >= 2) {
+    popupLayers[1].openOn(map);
   }
 
-  // ── Enter key trigger ──
-  ['origin', 'destination'].forEach(id => {
-    document.getElementById(id).addEventListener('keydown', e => {
-      if (e.key === 'Enter') optimizeRoutes();
-    });
+  if (allCoords.length > 1) {
+    map.fitBounds(L.latLngBounds(allCoords), { padding: [40, 40] });
+  }
+}
+
+function highlightRoute(type) {
+  Object.entries(routeLayers).forEach(([rt, poly]) => {
+    const style = ROUTE_STYLES[rt];
+    if (rt === type) {
+      poly.setStyle({ weight: 6, opacity: 1.0 });
+      poly.bringToFront();
+    } else {
+      poly.setStyle({ weight: style.weight, opacity: 0.3 });
+    }
   });
+}
+
+function clearMap(resetView = true) {
+  Object.values(routeLayers).forEach(l => l.remove());
+  markerLayers.forEach(l => l.remove());
+  popupLayers.forEach(l => l.remove && map.closePopup(l));
+  routeLayers  = {};
+  markerLayers = [];
+  popupLayers  = [];
+  if (resetView) map.setView([20.5937, 78.9629], 5);
+}
+
+// ══════════════════════════════════════════════════════════════════
+// ACHIEVEMENTS POPUP
+// ══════════════════════════════════════════════════════════════════
+let achQueue = [];
+let achShowing = false;
+
+function showAchievements(list) {
+  achQueue.push(...list);
+  if (!achShowing) processAchQueue();
+}
+
+function processAchQueue() {
+  if (!achQueue.length) { achShowing = false; return; }
+  achShowing = true;
+  const ach = achQueue.shift();
+  const popup = document.getElementById('achievement-popup');
+  document.getElementById('ach-icon').textContent = ach.badge_icon;
+  document.getElementById('ach-name').textContent = ach.badge_name;
+  document.getElementById('ach-desc').textContent = ach.description;
+  popup.classList.add('show');
+  setTimeout(() => {
+    popup.classList.remove('show');
+    setTimeout(processAchQueue, 400);
+  }, 4000);
+}
+
+// ══════════════════════════════════════════════════════════════════
+// COUNTER ANIMATION
+// ══════════════════════════════════════════════════════════════════
+function animateCounter(el, target, suffix = '') {
+  let start = 0;
+  const step = target / (1800 / 16);
+  const timer = setInterval(() => {
+    start = Math.min(start + step, target);
+    el.textContent = Math.floor(start).toLocaleString() + suffix;
+    if (start >= target) clearInterval(timer);
+  }, 16);
+}
+
+// ══════════════════════════════════════════════════════════════════
+// EMISSIONS COMPARE CHART
+// ══════════════════════════════════════════════════════════════════
+const vehicles = [
+  { name: 'Petrol Car',  icon: '🚗', co2: 171, color: '#ef4444' },
+  { name: 'Diesel Car',  icon: '🚙', co2: 145, color: '#f97316' },
+  { name: 'CNG Car',     icon: '🚘', co2: 96,  color: '#eab308' },
+  { name: 'Bike',        icon: '🏍️', co2: 83,  color: '#a855f7' },
+  { name: 'Public Bus',  icon: '🚌', co2: 14,  color: '#3b82f6' },
+  { name: 'Electric',    icon: '⚡', co2: 0,   color: '#22c55e' },
+  { name: 'Bicycle',     icon: '🚲', co2: 0,   color: '#14b8a6' },
+];
+
+const maxCo2    = Math.max(...vehicles.map(v => v.co2));
+const maxHeight = 160;
+const grid      = document.getElementById('compare-grid');
+vehicles.forEach(v => {
+  const barH = v.co2 === 0 ? 8 : Math.max(8, (v.co2 / maxCo2) * maxHeight);
+  const el = document.createElement('div');
+  el.className = 'compare-bar-wrap';
+  el.innerHTML = `
+    <span class="compare-bar-label">${v.icon}</span>
+    <div class="compare-bar" style="height:${barH}px;background:${v.color}20;border:1px solid ${v.color}50;border-bottom:2px solid ${v.color};"></div>
+    <div class="compare-bar-val">${v.co2 === 0 ? '0 g' : v.co2 + 'g'}</div>
+    <div class="compare-bar-name">${v.name}</div>
+  `;
+  grid.appendChild(el);
+});
+
+// ══════════════════════════════════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════════════════════════════════
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ══════════════════════════════════════════════════════════════════
+// KEYBOARD & URL PARAM HANDLING
+// ══════════════════════════════════════════════════════════════════
+['origin', 'destination'].forEach(id => {
+  document.getElementById(id).addEventListener('keydown', e => {
+    if (e.key === 'Enter') optimizeRoutes();
+  });
+});
+
+// Open modal if ?login=1 in URL
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.get('login') === '1') openModal('signin');
+
+// ══════════════════════════════════════════════════════════════════
+// BOOT
+// ══════════════════════════════════════════════════════════════════
+window.addEventListener('load', () => {
+  checkAuth();
+  setTimeout(() => {
+    animateCounter(document.getElementById('counter-routes'), 4823);
+    animateCounter(document.getElementById('counter-co2'),   12340);
+    animateCounter(document.getElementById('counter-trees'), 587);
+    animateCounter(document.getElementById('counter-cities'), 500);
+  }, 900);
+});
 </script>
+
+<!-- LIVE CARBON WIDGET -->
+<div id="live-carbon-widget" class="collapsed" onclick="this.classList.remove('collapsed')">
+  <div class="widget-icon">🌍</div>
+  <div class="widget-full">
+    <div class="lcw-section">
+      <div class="lcw-label"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--red);box-shadow:0 0 8px var(--red);"></span> INDIA EMITS (LIVE)</div>
+      <div class="lcw-val-red" id="lcw-india-emits">0 kg CO₂</div>
+    </div>
+    <div class="lcw-divider"></div>
+    <div class="lcw-section">
+      <div class="lcw-label"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);"></span> YOU SAVED</div>
+      <div class="lcw-val-green" id="lcw-you-saved">0.00 kg</div>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>

@@ -4,33 +4,44 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard — SROS</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<meta name="description" content="Your personal sustainability dashboard — track CO₂ savings, trip history, and leaderboard rankings.">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&family=Inter:wght@300;400;500&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <style>
   :root {
-    --bg: #0a0f0d;
-    --surface: #111810;
-    --surface2: #182016;
-    --green: #4ade80;
+    --bg: #0a1628;
+    --surface: #0f2035;
+    --surface2: #152a42;
+    --green: #22c55e;
     --green-dim: #16a34a;
-    --green-glow: rgba(74,222,128,0.1);
-    --amber: #fbbf24;
-    --red: #f87171;
+    --green-glow: rgba(34,197,94,0.15);
+    --amber: #f59e0b;
+    --red: #ef4444;
     --blue: #60a5fa;
-    --text: #e8f0ea;
-    --muted: #6b7c6e;
-    --border: rgba(74,222,128,0.12);
-    --serif: 'DM Serif Display', serif;
-    --sans: 'DM Sans', sans-serif;
+    --text: #f1f5f9;
+    --muted: #94a3b8;
+    --border: rgba(34,197,94,0.2);
+    --serif: 'Outfit', sans-serif;
+    --sans: 'Inter', sans-serif;
     --mono: 'Space Mono', monospace;
     --radius: 16px;
   }
 
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  @keyframes meshShift {
+    0% { background-position: 0% 0%; }
+    50% { background-position: 100% 100%; }
+    100% { background-position: 0% 0%; }
+  }
 
   body {
     font-family: var(--sans);
-    background: var(--bg);
+    background-color: #060e1a;
+    background-image:
+      radial-gradient(ellipse 120% 60% at 50% -10%, rgba(34,197,94,0.08) 0%, transparent 70%),
+      radial-gradient(ellipse 80% 60% at 0% 100%, rgba(14,50,80,0.6) 0%, transparent 60%),
+      radial-gradient(ellipse 80% 60% at 100% 70%, rgba(8,60,45,0.5) 0%, transparent 60%);
+    background-size: 200% 200%;
+    animation: meshShift 25s ease infinite;
     color: var(--text);
     min-height: 100vh;
     display: grid;
@@ -41,14 +52,15 @@
   /* ── SIDEBAR ── */
   aside {
     grid-row: 1 / 3;
-    background: var(--surface);
+    background: rgba(10, 22, 40, 0.95);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     border-right: 1px solid var(--border);
     padding: 32px 20px;
     display: flex;
     flex-direction: column;
     gap: 8px;
   }
-
   .sidebar-logo {
     font-family: var(--mono);
     font-size: 13px;
@@ -59,7 +71,6 @@
     margin-bottom: 32px;
     padding: 0 8px;
   }
-
   .sidebar-section {
     font-family: var(--mono);
     font-size: 9px;
@@ -69,7 +80,6 @@
     padding: 8px 8px 4px;
     margin-top: 8px;
   }
-
   .sidebar-link {
     display: flex;
     align-items: center;
@@ -85,7 +95,6 @@
   .sidebar-link:hover { background: var(--surface2); color: var(--text); }
   .sidebar-link.active { background: var(--green-glow); color: var(--green); }
   .sidebar-link .icon { font-size: 16px; width: 20px; text-align: center; }
-
   .sidebar-bottom {
     margin-top: auto;
     padding: 16px 12px;
@@ -106,19 +115,10 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    background: rgba(6,14,26,0.8);
   }
-
-  .page-title {
-    font-family: var(--serif);
-    font-size: 26px;
-  }
-
-  .header-right {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-  }
-
+  .page-title { font-family: var(--serif); font-size: 26px; }
+  .header-right { display: flex; gap: 12px; align-items: center; }
   .badge {
     font-family: var(--mono);
     font-size: 10px;
@@ -127,7 +127,6 @@
     letter-spacing: 0.08em;
     text-transform: uppercase;
   }
-
   .badge-green { background: var(--green-glow); color: var(--green); border: 1px solid rgba(74,222,128,0.3); }
   .badge-amber { background: rgba(251,191,36,0.1); color: var(--amber); border: 1px solid rgba(251,191,36,0.3); }
 
@@ -141,24 +140,42 @@
     gap: 28px;
   }
 
+  /* ── SKELETON ── */
+  @keyframes shimmer {
+    0%   { background-position: -400px 0; }
+    100% { background-position: 400px 0; }
+  }
+  .skeleton {
+    background: linear-gradient(90deg, var(--surface2) 25%, rgba(74,222,128,0.05) 50%, var(--surface2) 75%);
+    background-size: 800px 100%;
+    animation: shimmer 1.4s infinite;
+    border-radius: 8px;
+  }
+  .skeleton-card {
+    height: 120px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+  }
+  .skeleton-chart { height: 260px; border-radius: var(--radius); border: 1px solid var(--border); }
+  .skeleton-row   { height: 44px; margin-bottom: 8px; }
+
   /* ── METRIC CARDS ── */
   .metrics-row {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 16px;
   }
-
   .metric-card {
-    background: var(--surface);
+    background: rgba(15, 32, 53, 0.9);
+    backdrop-filter: blur(16px);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 24px;
-    transition: border-color 0.2s;
+    transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
   }
-  .metric-card:hover { border-color: rgba(74,222,128,0.3); }
-
+  .metric-card:hover { border-color: var(--green); transform: translateY(-4px); box-shadow: 0 16px 40px rgba(0,0,0,0.5), 0 0 24px rgba(34,197,94,0.15); }
   .metric-icon { font-size: 24px; margin-bottom: 16px; display: block; }
-
   .metric-val {
     font-family: var(--mono);
     font-size: 28px;
@@ -166,13 +183,7 @@
     line-height: 1;
     margin-bottom: 6px;
   }
-
-  .metric-label {
-    font-size: 12px;
-    color: var(--muted);
-    letter-spacing: 0.04em;
-  }
-
+  .metric-label { font-size: 12px; color: var(--muted); letter-spacing: 0.04em; }
   .metric-delta {
     display: inline-flex;
     align-items: center;
@@ -186,18 +197,17 @@
   .delta-up { background: rgba(74,222,128,0.1); color: var(--green); }
   .delta-neutral { background: rgba(107,124,110,0.15); color: var(--muted); }
 
-  /* ── TWO COLUMN ROW ── */
+  /* ── CARDS ── */
   .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
   .three-col { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
-
-  /* ── CARD ── */
   .card {
-    background: var(--surface);
+    background: rgba(15, 32, 53, 0.9);
+    backdrop-filter: blur(16px);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 28px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
   }
-
   .card-title {
     font-family: var(--mono);
     font-size: 11px;
@@ -210,28 +220,8 @@
     justify-content: space-between;
   }
 
-  /* ── EMISSION CHART ── */
-  .chart-bars {
-    display: flex;
-    gap: 10px;
-    align-items: flex-end;
-    height: 150px;
-    padding-bottom: 0;
-  }
-
-  .chart-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; }
-
-  .chart-bar {
-    width: 100%;
-    border-radius: 6px 6px 0 0;
-    transition: opacity 0.2s;
-    cursor: pointer;
-    position: relative;
-  }
-  .chart-bar:hover { opacity: 0.8; }
-
-  .chart-bar-label { font-size: 16px; }
-  .chart-bar-val { font-family: var(--mono); font-size: 9px; color: var(--muted); }
+  /* ── CHART ── */
+  .chart-container { position: relative; height: 200px; }
 
   /* ── LEADERBOARD ── */
   .leaderboard-row {
@@ -240,9 +230,10 @@
     gap: 14px;
     padding: 12px 0;
     border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
   }
   .leaderboard-row:last-child { border-bottom: none; }
-
+  .leaderboard-row.me { background: rgba(74,222,128,0.06); border-radius: 8px; padding-left: 8px; }
   .rank-badge {
     font-family: var(--mono);
     font-size: 11px;
@@ -255,47 +246,73 @@
     justify-content: center;
     flex-shrink: 0;
   }
-
   .rank-1 { background: rgba(251,191,36,0.15); color: var(--amber); }
-  .rank-2 { background: rgba(148,163,184,0.1); color: #94a3b8; }
-  .rank-3 { background: rgba(205,127,50,0.1);  color: #cd7f32; }
+  .rank-2 { background: rgba(148,163,184,0.1);  color: #94a3b8; }
+  .rank-3 { background: rgba(205,127,50,0.1);   color: #cd7f32; }
   .rank-other { background: var(--surface2); color: var(--muted); }
-
   .lb-name { flex: 1; font-size: 14px; }
   .lb-trips { font-family: var(--mono); font-size: 11px; color: var(--muted); }
-  .lb-savings {
-    font-family: var(--mono);
-    font-size: 13px;
-    color: var(--green);
-    font-weight: 700;
-  }
-
+  .lb-savings { font-family: var(--mono); font-size: 13px; color: var(--green); font-weight: 700; }
   .lb-bar-wrap { width: 80px; }
   .lb-bar { height: 4px; background: var(--surface2); border-radius: 2px; }
   .lb-bar-fill { height: 100%; border-radius: 2px; background: var(--green); }
 
-  /* ── ROUTE HISTORY ── */
-  .history-row {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 14px 0;
+  /* ── TRIP TABLE ── */
+  .trip-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .trip-table th {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: left;
+    padding: 8px 10px;
     border-bottom: 1px solid var(--border);
   }
-  .history-row:last-child { border-bottom: none; }
-
-  .history-dot {
-    width: 10px; height: 10px;
-    border-radius: 50%;
-    flex-shrink: 0;
+  .trip-table td {
+    padding: 12px 10px;
+    border-bottom: 1px solid rgba(74,222,128,0.06);
+    vertical-align: middle;
   }
+  .trip-table tr:hover td { background: rgba(74,222,128,0.03); }
+  .route-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+  .share-btn {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .share-btn:hover { border-color: var(--green); color: var(--green); }
 
-  .history-route { flex: 1; }
-  .history-cities { font-size: 14px; }
-  .history-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
-
-  .history-co2 { font-family: var(--mono); font-size: 12px; text-align: right; }
-  .history-score { font-family: var(--mono); font-size: 10px; color: var(--muted); margin-top: 2px; text-align: right; }
+  /* ── PAGINATION ── */
+  .pagination {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 16px;
+    justify-content: center;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .page-btn {
+    padding: 6px 14px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .page-btn:hover:not(:disabled) { border-color: var(--green); color: var(--green); }
+  .page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
   /* ── VEHICLE BREAKDOWN ── */
   .vehicle-list { display: flex; flex-direction: column; gap: 14px; }
@@ -310,6 +327,25 @@
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed;
+    bottom: 32px; right: 32px;
+    background: var(--surface);
+    border: 1px solid var(--green);
+    border-radius: 12px;
+    padding: 14px 22px;
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.05em;
+    color: var(--green);
+    transform: translateY(20px);
+    opacity: 0;
+    transition: all 0.3s;
+    z-index: 999;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
 
   @media (max-width: 900px) {
     body { grid-template-columns: 1fr; }
@@ -328,37 +364,19 @@
   <div class="sidebar-logo">SROS</div>
 
   <div class="sidebar-section">Main</div>
-  <a class="sidebar-link active" href="/dashboard">
-    <span class="icon">📊</span> Dashboard
-  </a>
-  <a class="sidebar-link" href="/">
-    <span class="icon">🗺️</span> Route Planner
-  </a>
-  <a class="sidebar-link" href="/">
-    <span class="icon">⚡</span> Optimize
-  </a>
+  <a class="sidebar-link active" href="/dashboard"><span class="icon">📊</span> Dashboard</a>
+  <a class="sidebar-link" href="/"><span class="icon">🗺️</span> Route Planner</a>
 
   <div class="sidebar-section">Analytics</div>
-  <a class="sidebar-link" href="#">
-    <span class="icon">🌱</span> Emissions
-  </a>
-  <a class="sidebar-link" href="#">
-    <span class="icon">🏆</span> Leaderboard
-  </a>
-  <a class="sidebar-link" href="#">
-    <span class="icon">📅</span> History
-  </a>
+  <a class="sidebar-link" href="#"><span class="icon">🌱</span> Emissions</a>
+  <a class="sidebar-link" href="#"><span class="icon">🏆</span> Leaderboard</a>
+  <a class="sidebar-link" href="#"><span class="icon">📅</span> History</a>
 
   <div class="sidebar-section">System</div>
-  <a class="sidebar-link" href="#">
-    <span class="icon">⚙️</span> Settings
-  </a>
-  <a class="sidebar-link" href="#">
-    <span class="icon">📖</span> Docs
-  </a>
+  <a class="sidebar-link" href="#" onclick="openSettings(); return false;"><span class="icon">⚙️</span> Settings</a>
 
   <div class="sidebar-bottom">
-    <strong>17 cities</strong> supported<br>
+    <strong>Any city</strong> supported<br>
     <span>7 vehicle profiles<br>Real-time optimization</span>
   </div>
 </aside>
@@ -367,53 +385,44 @@
 <header>
   <div class="page-title">Overview</div>
   <div class="header-right">
-    <div class="badge badge-green">● System Online</div>
-    <div class="badge badge-amber">Live Demo Mode</div>
+    <div class="badge badge-green" id="system-status">● System Online</div>
+    <div class="badge badge-amber" id="user-badge">Loading…</div>
     <a href="/" style="font-family:var(--mono);font-size:11px;color:var(--muted);text-decoration:none;letter-spacing:0.08em;padding:8px 16px;border:1px solid var(--border);border-radius:8px;">← Back to Planner</a>
   </div>
 </header>
 
 <!-- MAIN -->
-<main>
+<main id="main-content">
 
   <!-- METRIC CARDS -->
-  <div class="metrics-row">
-    <div class="metric-card">
-      <span class="metric-icon">🗺️</span>
-      <div class="metric-val" style="color:var(--green);" id="m-routes">4,823</div>
-      <div class="metric-label">Routes Calculated</div>
-      <div class="metric-delta delta-up">↑ 12% this week</div>
+  <div class="metrics-row" id="metrics-row">
+    <!-- Skeleton -->
+    <div class="skeleton skeleton-card"></div>
+    <div class="skeleton skeleton-card"></div>
+    <div class="skeleton skeleton-card"></div>
+    <div class="skeleton skeleton-card"></div>
+  </div>
+
+  <div id="ai-daily-tip" style="background:rgba(30,50,40,0.6); backdrop-filter:blur(10px); border:1px solid rgba(74,222,128,0.3); border-radius:16px; padding:20px; display:flex; align-items:center; gap:16px; box-shadow: 0 10px 20px rgba(0,0,0,0.3);">
+    <div style="width:48px; height:48px; border-radius:24px; background:linear-gradient(135deg, #4ade80, #3b82f6); display:flex; align-items:center; justify-content:center; font-size:24px; box-shadow:0 0 15px rgba(74,222,128,0.4); flex-shrink:0;">
+      👨🏻‍💼
     </div>
-    <div class="metric-card">
-      <span class="metric-icon">🌿</span>
-      <div class="metric-val" id="m-co2">12,340</div>
-      <div class="metric-label">kg CO₂ Saved</div>
-      <div class="metric-delta delta-up">↑ 8% this week</div>
-    </div>
-    <div class="metric-card">
-      <span class="metric-icon">🌳</span>
-      <div class="metric-val" id="m-trees">587</div>
-      <div class="metric-label">Trees Equivalent</div>
-      <div class="metric-delta delta-up">↑ Cumulative</div>
-    </div>
-    <div class="metric-card">
-      <span class="metric-icon">💰</span>
-      <div class="metric-val" id="m-cost">₹2.1L</div>
-      <div class="metric-label">Fuel Cost Saved</div>
-      <div class="metric-delta delta-neutral">Across all users</div>
+    <div>
+      <div style="font-family:var(--sans); font-size:12px; font-weight:700; color:var(--green); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Daily Eco Tip from Mia</div>
+      <div id="ai-tip-text" style="font-size:15px; color:#d1dfd4; line-height:1.5;">Loading your daily insight...</div>
     </div>
   </div>
 
   <!-- CHART + LEADERBOARD -->
   <div class="two-col">
-
     <div class="card">
       <div class="card-title">
-        <span>CO₂ per vehicle (g/km)</span>
-        <span style="color:var(--green);">per 100km</span>
+        <span>Monthly CO₂ Saved</span>
+        <span style="color:var(--green);">Last 6 months</span>
       </div>
-      <div class="chart-bars" id="emission-chart">
-        <!-- Rendered by JS -->
+      <div class="skeleton skeleton-chart" id="chart-skeleton"></div>
+      <div class="chart-container" id="chart-container" style="display:none;">
+        <canvas id="co2-chart"></canvas>
       </div>
     </div>
 
@@ -422,142 +431,385 @@
         <span>Eco Leaderboard</span>
         <span>Top Savers</span>
       </div>
-      <div id="leaderboard-list">Loading…</div>
+      <div id="leaderboard-skeleton">
+        <div class="skeleton skeleton-row"></div>
+        <div class="skeleton skeleton-row"></div>
+        <div class="skeleton skeleton-row"></div>
+        <div class="skeleton skeleton-row"></div>
+        <div class="skeleton skeleton-row"></div>
+      </div>
+      <div id="leaderboard-list" style="display:none;"></div>
     </div>
-
   </div>
 
-  <!-- HISTORY + VEHICLE BREAKDOWN -->
-  <div class="three-col">
-
-    <div class="card">
-      <div class="card-title">
-        <span>Recent Routes</span>
-        <span style="color:var(--muted);">Last 5 trips</span>
-      </div>
-      <div id="history-list">
-        <!-- Rendered by JS -->
+  <!-- TRIP HISTORY -->
+  <div class="card">
+    <div class="card-title">
+      <span>Trip History</span>
+      <span id="trip-count-label" style="color:var(--muted);">Loading…</span>
+    </div>
+    <div id="trips-skeleton">
+      <div class="skeleton skeleton-row"></div>
+      <div class="skeleton skeleton-row"></div>
+      <div class="skeleton skeleton-row"></div>
+    </div>
+    <div id="trips-content" style="display:none;">
+      <table class="trip-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Route</th>
+            <th>Vehicle</th>
+            <th>Type</th>
+            <th>CO₂</th>
+            <th>Score</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="trips-tbody"></tbody>
+      </table>
+      <div class="pagination">
+        <button class="page-btn" id="prev-btn" onclick="changePage(-1)" disabled>← Prev</button>
+        <span id="page-info">Page 1</span>
+        <button class="page-btn" id="next-btn" onclick="changePage(1)">Next →</button>
       </div>
     </div>
-
-    <div class="card">
-      <div class="card-title">
-        <span>Vehicle Usage</span>
-      </div>
-      <div class="vehicle-list" id="vehicle-breakdown">
-        <!-- Rendered by JS -->
-      </div>
-    </div>
-
   </div>
 
 </main>
 
-<script>
-  // ── Emission chart ──
-  const vehicles = [
-    { name: 'Petrol', icon: '🚗', co2: 171, color: '#ef4444' },
-    { name: 'Diesel', icon: '🚙', co2: 145, color: '#f97316' },
-    { name: 'CNG',    icon: '🚘', co2: 96,  color: '#eab308' },
-    { name: 'Bike',   icon: '🏍️', co2: 83,  color: '#a855f7' },
-    { name: 'Bus',    icon: '🚌', co2: 14,  color: '#3b82f6' },
-    { name: 'EV',     icon: '⚡', co2: 0,   color: '#22c55e' },
-    { name: 'Cycle',  icon: '🚲', co2: 0,   color: '#14b8a6' },
-  ];
+<div class="toast" id="toast"></div>
 
-  const maxCo2 = 171;
-  const chart  = document.getElementById('emission-chart');
-  vehicles.forEach(v => {
-    const barH = v.co2 === 0 ? 6 : Math.max(6, (v.co2 / maxCo2) * 130);
-    const w = document.createElement('div');
-    w.className = 'chart-bar-wrap';
-    w.innerHTML = `
-      <div class="chart-bar-label">${v.icon}</div>
-      <div class="chart-bar" title="${v.co2}g CO₂/km" style="height:${barH}px;background:${v.color}25;border:1px solid ${v.color}60;border-bottom:2px solid ${v.color};"></div>
-      <div class="chart-bar-val">${v.co2}g</div>
-      <div class="chart-bar-val">${v.name}</div>
-    `;
-    chart.appendChild(w);
-  });
-
-  // ── Leaderboard ──
-  async function loadLeaderboard() {
-    try {
-      const res = await fetch('/api/leaderboard');
-      const data = await res.json();
-      const container = document.getElementById('leaderboard-list');
-      const maxSavings = Math.max(...data.map(d => d.savings_kg));
-      container.innerHTML = data.map(d => {
-        const rankClass = d.rank <= 3 ? `rank-${d.rank}` : 'rank-other';
-        const medals = { 1: '🥇', 2: '🥈', 3: '🥉' };
-        const icon = medals[d.rank] || d.rank;
-        const fillWidth = Math.round((d.savings_kg / maxSavings) * 100);
-        return `
-          <div class="leaderboard-row">
-            <div class="rank-badge ${rankClass}">${icon}</div>
-            <div class="lb-name">${d.user}</div>
-            <div class="lb-bar-wrap">
-              <div class="lb-bar"><div class="lb-bar-fill" style="width:${fillWidth}%"></div></div>
-            </div>
+<!-- SETTINGS MODAL -->
+<div id="settings-modal" onclick="handleSettingsClick(event)" style="position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);z-index:200;display:none;align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:24px;width:480px;max-width:95vw;padding:40px;position:relative;box-shadow:0 40px 100px rgba(0,0,0,0.6);">
+    <button onclick="closeSettings()" style="position:absolute;top:20px;right:20px;background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;">✕</button>
+    <div style="font-family:var(--serif);font-size:28px;margin-bottom:8px;">⚙️ Preferences</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:28px;">Customize your SROS experience</div>
+    
+    <div style="display:flex;flex-direction:column;gap:16px;">
+        <!-- Map Theme -->
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:20px;background:var(--surface2);border-radius:16px;border:1px solid var(--border);">
             <div>
-              <div class="lb-savings">${d.savings_kg} kg</div>
-              <div class="lb-trips">${d.trips} trips</div>
+                <div style="font-weight:600;font-size:15px;margin-bottom:4px;">🗺️ Map Theme</div>
+                <div style="font-size:12px;color:var(--muted);">Choose your preferred map style</div>
             </div>
-          </div>
-        `;
-      }).join('');
+            <select id="map-theme-select" style="background:var(--bg);border:1px solid var(--border);color:var(--text);padding:10px 16px;border-radius:10px;font-family:var(--sans);font-size:13px;cursor:pointer;">
+                <option value="dark">CartoDB Dark</option>
+                <option value="light">CartoDB Positron</option>
+                <option value="street">OSM Streets</option>
+            </select>
+        </div>
+        
+        <!-- Default Vehicle -->
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:20px;background:var(--surface2);border-radius:16px;border:1px solid var(--border);">
+            <div>
+                <div style="font-weight:600;font-size:15px;margin-bottom:4px;">🚗 Default Vehicle</div>
+                <div style="font-size:12px;color:var(--muted);">Set your primary vehicle profile</div>
+            </div>
+            <select id="default-vehicle-select" style="background:var(--bg);border:1px solid var(--border);color:var(--text);padding:10px 16px;border-radius:10px;font-family:var(--sans);font-size:13px;cursor:pointer;">
+                <option value="car_petrol">🚗 Petrol Car</option>
+                <option value="car_ev">⚡ Electric Car</option>
+                <option value="car_diesel">🚙 Diesel Car</option>
+                <option value="car_cng">🚕 CNG Car</option>
+                <option value="bicycle">🚲 Bicycle</option>
+            </select>
+        </div>
+
+        <!-- Notifications -->
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:20px;background:var(--surface2);border-radius:16px;border:1px solid var(--border);">
+            <div>
+                <div style="font-weight:600;font-size:15px;margin-bottom:4px;">🔔 Eco Notifications</div>
+                <div style="font-size:12px;color:var(--muted);">Receive daily sustainability tips</div>
+            </div>
+            <label style="position:relative;display:inline-block;width:52px;height:28px;cursor:pointer;">
+                <input type="checkbox" checked style="opacity:0;width:0;height:0;" id="eco-notif-toggle">
+                <span style="position:absolute;inset:0;background:var(--green-dim);border-radius:28px;transition:0.3s;" id="toggle-track"></span>
+                <span style="position:absolute;top:3px;left:3px;width:22px;height:22px;background:#fff;border-radius:50%;transition:0.3s;transform:translateX(24px);" id="toggle-thumb"></span>
+            </label>
+        </div>
+
+        <!-- Export Button -->
+        <button onclick="alert('📊 Exporting your carbon analytics data as CSV... Check your downloads!'); closeSettings();" style="margin-top:8px;padding:14px;border-radius:14px;border:1px solid var(--border);background:transparent;color:var(--green);font-family:var(--mono);font-size:12px;cursor:pointer;width:100%;text-transform:uppercase;letter-spacing:1.5px;transition:all 0.25s;" onmouseover="this.style.background='var(--green)';this.style.color='#000';this.style.borderColor='var(--green)';" onmouseout="this.style.background='transparent';this.style.color='var(--green)';this.style.borderColor='var(--border)';">
+            📥 Export Analytics Data
+        </button>
+    </div>
+  </div>
+</div>
+
+
+<script>
+function openSettings() { document.getElementById('settings-modal').style.display = 'flex'; }
+function closeSettings() { document.getElementById('settings-modal').style.display = 'none'; }
+function handleSettingsClick(e) { if(e.target.id === 'settings-modal') closeSettings(); }
+
+  // ── State ──────────────────────────────────────────────────────────────
+  const TOKEN = localStorage.getItem('token');
+  let currentPage = 1;
+  let totalPages  = 1;
+  let currentUserName = null;
+
+  const AUTH_HEADERS = TOKEN
+    ? { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' }
+    : { 'Content-Type': 'application/json' };
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3000);
+  }
+
+  // ── Auth guard ─────────────────────────────────────────────────────────
+  if (!TOKEN) {
+    window.location.href = '/?login=1';
+  }
+
+  // ── Load all data in parallel ─────────────────────────────────────────
+  async function loadDashboard() {
+    try {
+      const [statsRes, tripsRes, lbRes, meRes] = await Promise.all([
+        fetch('/api/stats',       { headers: AUTH_HEADERS }),
+        fetch('/api/trips?page=1&per_page=10', { headers: AUTH_HEADERS }),
+        fetch('/api/leaderboard', { headers: AUTH_HEADERS }),
+        fetch('/auth/me',         { headers: AUTH_HEADERS }),
+      ]);
+
+      // If any auth-required call returns 401 → redirect
+      if (statsRes.status === 401 || tripsRes.status === 401) {
+        localStorage.removeItem('token');
+        window.location.href = '/?login=1';
+        return;
+      }
+
+      const [statsData, tripsData, lbData, meData] = await Promise.all([
+        statsRes.json(), tripsRes.json(), lbRes.json(), meRes.json(),
+      ]);
+
+      // Current user name
+      if (meData.success) {
+        currentUserName = meData.data.name;
+        document.getElementById('user-badge').textContent = currentUserName.split(' ')[0] + ' ●';
+      }
+
+      if (statsData.success)  renderMetrics(statsData.data);
+      if (statsData.success)  renderChart(statsData.data.monthly_co2);
+      if (tripsData.success)  renderTrips(tripsData.data);
+      if (lbData.success)     renderLeaderboard(lbData.data);
+
+      // Fetch AI Dashboard tip
+      fetch('/api/ai_dashboard_tip')
+        .then(r => r.json())
+        .then(tip => {
+           if (tip.success) {
+               document.getElementById('ai-tip-text').textContent = tip.data.insight;
+           }
+        }).catch(e => {
+           document.getElementById('ai-tip-text').textContent = "Small steps, big impact. Keep choosing the green route!";
+        });
+
     } catch (e) {
-      document.getElementById('leaderboard-list').textContent = 'Could not load data.';
+      showToast('Failed to load dashboard: ' + e.message);
     }
   }
-  loadLeaderboard();
 
-  // ── History ──
-  const historyData = [
-    { from: 'Delhi',     to: 'Agra',      type: 'greenest', color: '#22c55e', co2: 3.1,  score: 82 },
-    { from: 'Mumbai',    to: 'Pune',       type: 'balanced', color: '#f59e0b', co2: 2.4,  score: 68 },
-    { from: 'Bangalore', to: 'Hyderabad',  type: 'fastest',  color: '#ef4444', co2: 11.2, score: 35 },
-    { from: 'Noida',     to: 'Jaipur',     type: 'greenest', color: '#22c55e', co2: 5.7,  score: 79 },
-    { from: 'Chennai',   to: 'Bengaluru',  type: 'balanced', color: '#f59e0b', co2: 7.3,  score: 60 },
-  ];
+  // ── Metrics ────────────────────────────────────────────────────────────
+  function renderMetrics(stats) {
+    const row = document.getElementById('metrics-row');
+    row.innerHTML = `
+      <div class="metric-card">
+        <span class="metric-icon">🌿</span>
+        <div class="metric-val" style="color:var(--green);">${stats.total_co2_saved_kg} kg</div>
+        <div class="metric-label">CO₂ Saved</div>
+        <div class="metric-delta delta-up">↑ Cumulative</div>
+      </div>
+      <div class="metric-card">
+        <span class="metric-icon">🗺️</span>
+        <div class="metric-val" style="color:var(--amber);">${stats.total_trips}</div>
+        <div class="metric-label">Total Trips</div>
+        <div class="metric-delta delta-up">🔥 ${stats.streak_days}-day streak</div>
+      </div>
+      <div class="metric-card">
+        <span class="metric-icon">📍</span>
+        <div class="metric-val">${stats.total_distance_km} km</div>
+        <div class="metric-label">Total Distance</div>
+        <div class="metric-delta delta-neutral">All trips combined</div>
+      </div>
+      <div class="metric-card">
+        <span class="metric-icon">💰</span>
+        <div class="metric-val" style="color:var(--green);">₹${stats.total_fuel_saved_inr}</div>
+        <div class="metric-label">Fuel Saved</div>
+        <div class="metric-delta delta-up">↑ vs petrol baseline</div>
+      </div>
+    `;
+  }
 
-  const hist = document.getElementById('history-list');
-  hist.innerHTML = historyData.map(h => `
-    <div class="history-row">
-      <div class="history-dot" style="background:${h.color}"></div>
-      <div class="history-route">
-        <div class="history-cities">${h.from} → ${h.to}</div>
-        <div class="history-meta">${h.type} route</div>
-      </div>
-      <div>
-        <div class="history-co2" style="color:${h.color}">${h.co2} kg CO₂</div>
-        <div class="history-score">Score: ${h.score}/100</div>
-      </div>
-    </div>
-  `).join('');
+  // ── Monthly CO₂ Chart (Chart.js) ───────────────────────────────────────
+  function renderChart(monthly) {
+    document.getElementById('chart-skeleton').style.display = 'none';
+    document.getElementById('chart-container').style.display = 'block';
 
-  // ── Vehicle breakdown ──
-  const vehicleUsage = [
-    { name: 'Petrol Car',   pct: 42, color: '#ef4444' },
-    { name: 'Electric',     pct: 24, color: '#22c55e' },
-    { name: 'CNG Car',      pct: 16, color: '#eab308' },
-    { name: 'Bike',         pct: 12, color: '#a855f7' },
-    { name: 'Public Bus',   pct: 6,  color: '#3b82f6' },
-  ];
+    const labels = monthly.map(m => m.month);
+    const values = monthly.map(m => m.co2_kg);
 
-  const vb = document.getElementById('vehicle-breakdown');
-  vb.innerHTML = vehicleUsage.map(v => `
-    <div class="vehicle-row">
-      <div class="vehicle-row-header">
-        <span class="vehicle-row-name">${v.name}</span>
-        <span class="vehicle-row-val">${v.pct}%</span>
-      </div>
-      <div class="vehicle-progress">
-        <div class="vehicle-progress-fill" style="width:${v.pct}%;background:${v.color};"></div>
-      </div>
-    </div>
-  `).join('');
+    new Chart(document.getElementById('co2-chart'), {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: 'CO₂ Saved (kg)',
+          data: values,
+          borderColor: '#4ade80',
+          backgroundColor: 'rgba(74,222,128,0.08)',
+          fill: true,
+          tension: 0.4,
+          pointBackgroundColor: '#4ade80',
+          pointRadius: 4,
+          pointHoverRadius: 6,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#111810',
+            borderColor: 'rgba(74,222,128,0.3)',
+            borderWidth: 1,
+            titleColor: '#6b7c6e',
+            bodyColor: '#4ade80',
+            callbacks: { label: ctx => ` ${ctx.parsed.y} kg saved` },
+          },
+        },
+        scales: {
+          x: {
+            grid:  { display: false },
+            ticks: { color: '#6b7c6e', font: { family: 'Space Mono', size: 10 } },
+            border: { color: 'rgba(74,222,128,0.12)' },
+          },
+          y: {
+            grid:  { display: false },
+            ticks: { color: '#6b7c6e', font: { family: 'Space Mono', size: 10 } },
+            border: { color: 'rgba(74,222,128,0.12)' },
+          },
+        },
+      },
+    });
+  }
+
+  // ── Leaderboard ────────────────────────────────────────────────────────
+  function renderLeaderboard(entries) {
+    document.getElementById('leaderboard-skeleton').style.display = 'none';
+    const el = document.getElementById('leaderboard-list');
+    el.style.display = 'block';
+
+    const maxSavings = Math.max(...entries.map(e => e.savings_kg), 1);
+    const medals = { 1: '🥇', 2: '🥈', 3: '🥉' };
+
+    el.innerHTML = entries.map(e => {
+      const rankClass  = e.rank <= 3 ? `rank-${e.rank}` : 'rank-other';
+      const icon       = medals[e.rank] || e.rank;
+      const fillWidth  = Math.round((e.savings_kg / maxSavings) * 100);
+      const isMe       = currentUserName && e.name === currentUserName;
+      const greenBadge = e.green_badge ? ' 🌱' : '';
+
+      return `
+        <div class="leaderboard-row${isMe ? ' me' : ''}">
+          <div class="rank-badge ${rankClass}">${icon}</div>
+          <div class="lb-name">${e.name}${greenBadge}${isMe ? ' <span style="color:var(--green);font-size:10px;">(you)</span>' : ''}</div>
+          <div class="lb-bar-wrap">
+            <div class="lb-bar"><div class="lb-bar-fill" style="width:${fillWidth}%"></div></div>
+          </div>
+          <div>
+            <div class="lb-savings">${e.savings_kg} kg</div>
+            <div class="lb-trips">${e.trips} trips</div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  // ── Trip History ───────────────────────────────────────────────────────
+  const ROUTE_COLORS = { fastest: '#ef4444', balanced: '#f59e0b', greenest: '#22c55e' };
+  const VEHICLE_LABELS = {
+    car_petrol: '🚗 Petrol', car_diesel: '🚙 Diesel', car_cng: '🚘 CNG',
+    car_electric: '⚡ Electric', bike_petrol: '🏍️ Bike',
+    bicycle: '🚲 Bicycle', public_bus: '🚌 Bus',
+  };
+
+  function renderTrips(data) {
+    document.getElementById('trips-skeleton').style.display = 'none';
+    document.getElementById('trips-content').style.display = 'block';
+
+    totalPages = data.pages || 1;
+    currentPage = data.current_page || 1;
+
+    document.getElementById('trip-count-label').textContent =
+      `${data.total_count} trip${data.total_count !== 1 ? 's' : ''}`;
+    document.getElementById('page-info').textContent =
+      `Page ${currentPage} of ${totalPages}`;
+    document.getElementById('prev-btn').disabled = currentPage <= 1;
+    document.getElementById('next-btn').disabled = currentPage >= totalPages;
+
+    const tbody = document.getElementById('trips-tbody');
+    tbody.innerHTML = data.trips.map(t => {
+      const color  = ROUTE_COLORS[t.route_type] || '#4ade80';
+      const date   = new Date(t.created_at).toLocaleDateString('en-IN', { day:'2-digit', month:'short' });
+      const vehicle = VEHICLE_LABELS[t.vehicle_type] || t.vehicle_type;
+      return `
+        <tr>
+          <td style="color:var(--muted);font-family:var(--mono);font-size:11px;">${date}</td>
+          <td>
+            <span class="route-dot" style="background:${color}"></span>
+            <strong>${t.origin}</strong> → ${t.destination}
+          </td>
+          <td style="font-size:12px;">${vehicle}</td>
+          <td>
+            <span style="font-family:var(--mono);font-size:10px;padding:2px 8px;background:${color}20;color:${color};border-radius:4px;">
+              ${t.route_type}
+            </span>
+          </td>
+          <td style="font-family:var(--mono);font-size:12px;color:${color};">${t.co2_kg} kg</td>
+          <td style="font-family:var(--mono);font-size:12px;">${t.green_score}/100</td>
+          <td>
+            <button class="share-btn" onclick="shareTrip(${t.id}, this)">Share</button>
+          </td>
+        </tr>`;
+    }).join('');
+  }
+
+  async function changePage(delta) {
+    const newPage = currentPage + delta;
+    if (newPage < 1 || newPage > totalPages) return;
+    try {
+      const res  = await fetch(`/api/trips?page=${newPage}&per_page=10`, { headers: AUTH_HEADERS });
+      const data = await res.json();
+      if (data.success) renderTrips(data.data);
+    } catch (e) {
+      showToast('Failed to load page');
+    }
+  }
+
+  async function shareTrip(tripId, btn) {
+    btn.textContent = '…';
+    try {
+      const res  = await fetch(`/api/trips/${tripId}/share`, { method: 'POST', headers: AUTH_HEADERS });
+      const data = await res.json();
+      if (data.success) {
+        const url = window.location.origin + data.data.share_url;
+        await navigator.clipboard.writeText(url);
+        showToast('✓ Share link copied to clipboard!');
+        btn.textContent = '✓ Copied';
+        setTimeout(() => btn.textContent = 'Share', 2000);
+      }
+    } catch (e) {
+      btn.textContent = 'Share';
+      showToast('Could not generate share link');
+    }
+  }
+
+  // ── Boot ───────────────────────────────────────────────────────────────
+  loadDashboard();
 </script>
-
 </body>
 </html>
