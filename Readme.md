@@ -46,16 +46,8 @@ The system models the road network as a **graph**, where:
 
 ---
 
-## 🖥️ Homepage Preview
-
-👉 *(Add your deployed link or screenshot here)*
-
 ### 🔗 Live Demo:
 https://sros-kohl.vercel.app/
-
-### 📸 Screenshot:
-
-<img src="assets/homepage.png" width="800"/>
 
 ---
 
