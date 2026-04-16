@@ -117,13 +117,11 @@ class RouteOptimizer:
             em = calculator.calculate(dist_km, vehicle)
             em['green_score'] = max(0, em['green_score'] - v['green_penalty'])
 
-            # Use real waypoints for balanced; generate variations for others
-            if v['type'] == 'balanced' and base_waypoints:
+            # Use real road waypoints for all variants to ensure no straight/jagged lines
+            if base_waypoints:
                 waypoints = base_waypoints
             else:
-                waypoints = self._vary_waypoints(base_waypoints or [],
-                                                  origin_coords, dest_coords,
-                                                  v['type'])
+                waypoints = self._simple_waypoints(origin_coords, dest_coords, steps=20)
 
             routes.append({
                 'type':          v['type'],
@@ -218,14 +216,14 @@ class RouteOptimizer:
 
     def _get_driving_route(self, origin: dict, dest: dict) -> tuple[float, list]:
         """
-        Returns (distance_km, [waypoints]) from ORS Directions.
+        Returns (distance_km, [waypoints]) from ORS or OSRM Directions.
         Falls back to Haversine × 1.3 if API unavailable.
         """
         cache_key = (f"route:{origin['lat']:.4f},{origin['lng']:.4f}"
                      f":{dest['lat']:.4f},{dest['lng']:.4f}")
 
         cached = self._redis_get(cache_key)
-        if cached:
+        if cached and len(cached['wpts']) > 10:
             return cached['dist'], cached['wpts']
 
         if self._ors_key:
@@ -233,6 +231,12 @@ class RouteOptimizer:
             if dist is not None:
                 self._redis_set(cache_key, {'dist': dist, 'wpts': wpts}, ttl=86400)
                 return dist, wpts
+
+        # OSRM fallback (free, no key needed)
+        dist, wpts = self._osrm_directions(origin, dest)
+        if dist is not None:
+            self._redis_set(cache_key, {'dist': dist, 'wpts': wpts}, ttl=86400)
+            return dist, wpts
 
         # Haversine fallback
         haversine_km = self._haversine(origin, dest)
@@ -272,6 +276,27 @@ class RouteOptimizer:
             log.warning('ORS directions error: %s', e)
             return None, []
 
+    def _osrm_directions(self, origin: dict, dest: dict) -> tuple:
+        """Call OSRM Directions API (free), return (distance_km, waypoints_list)."""
+        url = f"http://router.project-osrm.org/route/v1/driving/{origin['lng']},{origin['lat']};{dest['lng']},{dest['lat']}"
+        try:
+            r = requests.get(url, params={
+                'overview': 'full',
+                'geometries': 'geojson'
+            }, headers={'User-Agent': 'SROS-App/2.0'}, timeout=10)
+            r.raise_for_status()
+            body = r.json()
+
+            route    = body['routes'][0]
+            dist_km  = round(route['distance'] / 1000.0, 2) # OSRM distance is in meters
+            coords   = route['geometry']['coordinates']   # [[lng,lat], ...]
+            waypoints = [{'lat': c[1], 'lng': c[0]} for c in coords]
+            return dist_km, waypoints
+
+        except Exception as e:
+            log.warning('OSRM directions error: %s', e)
+            return None, []
+
     # ── Waypoint helpers ──────────────────────────────────────────────────
 
     def _simple_waypoints(self, origin: dict, dest: dict, steps: int = 5) -> list:
@@ -293,16 +318,16 @@ class RouteOptimizer:
         or generate simple ones if no base is available.
         """
         if not base_wpts:
-            return self._simple_waypoints(origin, dest)
+            return self._simple_waypoints(origin, dest, steps=20)
 
         n = len(base_wpts)
         if route_type == 'fastest':
-            # Keep every 4th point → fewer, straighter
-            step = max(1, n // 6)
+            # Keep up to ~80 points for a smooth road line
+            step = max(1, n // 80)
             pts  = base_wpts[::step]
         else:
-            # Greenest: keep every 2nd point → denser
-            step = max(1, n // 12)
+            # Greenest: keep up to ~150 points for max detail
+            step = max(1, n // 150)
             pts  = base_wpts[::step]
 
         # Always include start & end
